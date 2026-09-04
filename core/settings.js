@@ -63,11 +63,29 @@ const DEFAULTS = {
     },
 };
 
+/** 兼容不支持 structuredClone 的旧版浏览器。默认值只包含普通对象、数组和基础值。 */
+function cloneValue(value) {
+    if (typeof structuredClone === 'function') {
+        return structuredClone(value);
+    }
+    if (Array.isArray(value)) {
+        return value.map(cloneValue);
+    }
+    if (isPlainObject(value)) {
+        const clone = {};
+        for (const [key, nested] of Object.entries(value)) {
+            clone[key] = cloneValue(nested);
+        }
+        return clone;
+    }
+    return value;
+}
+
 /** 递归补齐缺失字段，保留用户已有值。数组整体替换，不逐项合并。 */
 function fillDefaults(target, defaults) {
     for (const [key, def] of Object.entries(defaults)) {
         if (target[key] === undefined) {
-            target[key] = structuredClone(def);
+            target[key] = cloneValue(def);
         } else if (isPlainObject(def) && isPlainObject(target[key])) {
             fillDefaults(target[key], def);
         }
@@ -82,7 +100,7 @@ function isPlainObject(v) {
 /** 读取配置，首次调用时初始化并补齐默认值。 */
 export function getSettings() {
     if (!extension_settings[EXT_NAME]) {
-        extension_settings[EXT_NAME] = structuredClone(DEFAULTS);
+        extension_settings[EXT_NAME] = cloneValue(DEFAULTS);
     }
     return fillDefaults(extension_settings[EXT_NAME], DEFAULTS);
 }

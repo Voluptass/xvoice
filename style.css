@@ -289,11 +289,20 @@
     position: fixed;
     left: calc(50% - 250px);
     top: 60px;
+    box-sizing: border-box;
+    /* 基线声明：旧版移动浏览器不认识 min()/var() 时仍能正常显示。 */
     width: 500px;
+    height: 640px;
     max-width: calc(100vw - 20px);
     max-height: calc(100vh - 90px);
+    width: min(500px, calc(var(--xvoice-viewport-width, 100vw) - 20px));
+    height: min(640px, calc(var(--xvoice-viewport-height, 100vh) - 90px));
+    max-width: calc(var(--xvoice-viewport-width, 100vw) - 20px);
+    max-height: calc(var(--xvoice-viewport-height, 100vh) - 90px);
     min-width: 320px;
     min-height: 280px;
+    min-width: min(320px, calc(var(--xvoice-viewport-width, 100vw) - 20px));
+    min-height: min(280px, calc(var(--xvoice-viewport-height, 100vh) - 90px));
     display: none;
     flex-direction: column;
     background: var(--SmartThemeBlurTintColor, #23232b);
@@ -521,16 +530,24 @@
 /* ── 底部抽屉模式 ── */
 .xvoice-float--mobile {
     /* 覆盖桌面浮窗的定位和内联样式 */
+    /* visualViewport 缩小时（例如安卓软键盘）由 JS 提供 bottom inset；旧浏览器回退到 0。 */
     left: 0 !important;
     top: auto !important;
     bottom: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    bottom: calc(var(--xvoice-viewport-bottom-inset, 0px) + env(safe-area-inset-bottom, 0px)) !important;
     right: 0 !important;
     width: 100% !important;
+    width: var(--xvoice-viewport-width, 100vw) !important;
     max-width: 100%;
     min-width: 0;
-    height: 88vh;
-    max-height: 88vh;
+    height: 88vh !important;
+    max-height: 88vh !important;
     min-height: 50vh;
+    height: var(--xvoice-sheet-height, 88vh) !important;
+    max-height: calc(var(--xvoice-viewport-height, 100vh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: min(50vh, 280px);
+    min-height: var(--xvoice-sheet-min-height, 280px);
     border-radius: 14px 14px 0 0;
     resize: none;
     animation: xvoice-slide-up 0.2s ease-out;
@@ -621,4 +638,6 @@
 
 .xvoice-float--mobile .xvoice-float-body {
     padding: 10px;
+    padding-bottom: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
 }

@@ -19,6 +19,34 @@ function isMobile() {
     return window.innerWidth < MOBILE_BP;
 }
 
+function viewportSize() {
+    const viewport = window.visualViewport;
+    const layoutWidth = window.innerWidth || document.documentElement.clientWidth;
+    const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
+    const width = viewport && viewport.width ? viewport.width : layoutWidth;
+    const height = viewport && viewport.height ? viewport.height : layoutHeight;
+    const offsetLeft = viewport && viewport.offsetLeft ? viewport.offsetLeft : 0;
+    const offsetTop = viewport && viewport.offsetTop ? viewport.offsetTop : 0;
+    return {
+        width,
+        height,
+        offsetLeft,
+        offsetTop,
+        bottomInset: Math.max(0, layoutHeight - offsetTop - height),
+    };
+}
+
+function syncViewportVars(root) {
+    const { width, height, offsetLeft, offsetTop, bottomInset } = viewportSize();
+    root.style.setProperty('--xvoice-viewport-width', `${Math.round(width)}px`);
+    root.style.setProperty('--xvoice-viewport-height', `${Math.round(height)}px`);
+    root.style.setProperty('--xvoice-sheet-height', `${Math.round(height * SHEET_MAX)}px`);
+    root.style.setProperty('--xvoice-sheet-min-height', `${Math.round(Math.min(280, height * 0.5))}px`);
+    root.style.setProperty('--xvoice-viewport-left', `${Math.round(offsetLeft)}px`);
+    root.style.setProperty('--xvoice-viewport-top', `${Math.round(offsetTop)}px`);
+    root.style.setProperty('--xvoice-viewport-bottom-inset', `${Math.round(bottomInset)}px`);
+}
+
 function loadPosition() {
     try { return JSON.parse(localStorage.getItem(POSITION_KEY)) || null; } catch { return null; }
 }
@@ -32,8 +60,11 @@ function savePosition(root) {
 
 function clampIntoView(root) {
     const rect = root.getBoundingClientRect();
-    root.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - Math.min(rect.width, 200)))}px`;
-    root.style.top = `${Math.max(0, Math.min(rect.top, window.innerHeight - 40))}px`;
+    const { width, height, offsetLeft, offsetTop } = viewportSize();
+    const minLeft = Math.max(0, offsetLeft);
+    const minTop = Math.max(0, offsetTop);
+    root.style.left = `${Math.max(minLeft, Math.min(rect.left, offsetLeft + width - Math.min(rect.width, 200)))}px`;
+    root.style.top = `${Math.max(minTop, Math.min(rect.top, offsetTop + height - 40))}px`;
 }
 
 function makeDraggable(root, handle) {
@@ -132,6 +163,7 @@ export function createFloatingPanel({ title, onFirstOpen }) {
     let mounted = false;
 
     Object.assign(root.style, loadPosition() || { left: '', top: '' });
+    syncViewportVars(root);
     document.body.append(root);
     document.body.append(backdrop);
     makeDraggable(root, bar);
@@ -148,6 +180,7 @@ export function createFloatingPanel({ title, onFirstOpen }) {
     };
 
     const open = () => {
+        syncViewportVars(root);
         if (!mounted) {
             mounted = true;
             onFirstOpen?.(body);
@@ -171,7 +204,8 @@ export function createFloatingPanel({ title, onFirstOpen }) {
         if (e.key === 'Escape' && root.classList.contains('xvoice-float-open')) close();
     });
 
-    window.addEventListener('resize', () => {
+    const handleViewportChange = () => {
+        syncViewportVars(root);
         if (!root.classList.contains('xvoice-float-open')) return;
         applyMode();
         if (isMobile()) {
@@ -180,7 +214,12 @@ export function createFloatingPanel({ title, onFirstOpen }) {
             backdrop.classList.remove('xvoice-backdrop-show');
             clampIntoView(root);
         }
-    });
+    };
+    window.addEventListener('resize', handleViewportChange);
+    if (window.visualViewport && window.visualViewport.addEventListener) {
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+        window.visualViewport.addEventListener('scroll', handleViewportChange);
+    }
 
     return { body, open, close, toggle: () => (root.classList.contains('xvoice-float-open') ? close() : open()) };
 }
