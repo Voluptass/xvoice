@@ -1,0 +1,624 @@
+.xvoice-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.xvoice-tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.xvoice-tab {
+    flex: 1;
+    min-width: 3.5em;
+    padding: 6px 4px;
+    background: none;
+    border: none;
+    border-radius: 4px 4px 0 0;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.xvoice-tab:hover {
+    background: var(--white20a);
+}
+
+.xvoice-tab.active {
+    background: var(--white30a);
+    font-weight: bold;
+}
+
+.xvoice-open-btn {
+    width: 100%;
+    padding: 8px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.xvoice-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.xvoice-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+
+.xvoice-field > label {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+.xvoice-hint {
+    font-size: 0.8em;
+    opacity: 0.6;
+    line-height: 1.3;
+}
+
+.xvoice-error {
+    color: var(--warning, #e57373);
+    opacity: 1;
+}
+
+.xvoice-changed {
+    color: var(--golden, #d8b25f);
+}
+
+.xvoice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+}
+
+/* 窄容器里不锁住按钮的话文字会被压成竖排 */
+.xvoice-row .menu_button,
+.xvoice-input-row .menu_button {
+    flex: none;
+    white-space: nowrap;
+}
+
+.xvoice-status {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+/* ── 音色列表 ── */
+.xvoice-voice-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.xvoice-voice {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.xvoice-voice:hover {
+    background: var(--white20a);
+}
+
+.xvoice-voice code {
+    opacity: 0.6;
+    font-size: 0.9em;
+}
+
+/* ── 角色配音 ── */
+.xvoice-cast-box {
+    margin-top: 10px;
+}
+
+.xvoice-cast {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+}
+
+.xvoice-cast-name {
+    flex: none;
+    min-width: 4.5em;
+    font-size: 0.88em;
+    opacity: 0.85;
+}
+
+.xvoice-cast-voice {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85em;
+}
+
+/* ── 正则规则 ── */
+.xvoice-rule {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 4px;
+    padding: 6px;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.xvoice-rule-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.xvoice-rule-head input[data-f="name"] {
+    flex: 1;
+}
+
+.xvoice-del {
+    padding: 2px 8px;
+    min-width: auto;
+}
+
+.xvoice-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 6px 0;
+}
+
+.xvoice-step {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--black30a);
+}
+
+/* ── 助手对话 ── */
+.xvoice-llm-config summary {
+    cursor: pointer;
+    padding: 4px 0;
+    font-weight: bold;
+}
+
+.xvoice-chat {
+    min-height: 200px;
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: none;
+}
+
+.xvoice-msg {
+    padding: 6px 10px;
+    border-radius: 8px;
+    max-width: 90%;
+    font-size: 0.9em;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.xvoice-msg-user {
+    align-self: flex-end;
+    background: var(--white20a);
+}
+
+.xvoice-msg-assistant {
+    align-self: flex-start;
+    background: var(--black30a);
+}
+
+.xvoice-calls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.xvoice-calls:empty {
+    display: none;
+}
+
+.xvoice-call {
+    font-size: 0.75em;
+    opacity: 0.7;
+    padding: 1px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--SmartThemeBorderColor);
+}
+
+.xvoice-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.xvoice-input-row textarea {
+    flex: 1;
+    resize: vertical;
+}
+
+/* ── 选中朗读浮标 ── */
+.xvoice-selection-popup {
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 10000;
+    padding: 4px 12px;
+    border-radius: 14px;
+    background: var(--SmartThemeBlurTintColor, #2a2a2a);
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    font-size: 0.85em;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 40%);
+    user-select: none;
+}
+
+.xvoice-selection-popup:hover {
+    filter: brightness(1.2);
+}
+
+/* ── 消息按钮 ── */
+.xvoice-speak-btn.xvoice-active {
+    color: var(--golden, #d8b25f);
+}
+
+/* ── 浮窗（桌面模式） ── */
+.xvoice-float {
+    position: fixed;
+    left: calc(50% - 250px);
+    top: 60px;
+    width: 500px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 90px);
+    min-width: 320px;
+    min-height: 280px;
+    display: none;
+    flex-direction: column;
+    background: var(--SmartThemeBlurTintColor, #23232b);
+    border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
+    z-index: 3000;
+    resize: both;
+    overflow: hidden;
+}
+
+.xvoice-float-open {
+    display: flex;
+}
+
+.xvoice-float-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--black30a, rgb(0 0 0 / 30%));
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+}
+
+.xvoice-sheet-handle {
+    display: none;
+}
+
+.xvoice-float-title {
+    font-weight: bold;
+    font-size: 0.95em;
+}
+
+.xvoice-float-close {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1.1em;
+    opacity: 0.7;
+    padding: 0 4px;
+}
+
+.xvoice-float-close:hover {
+    opacity: 1;
+}
+
+.xvoice-float-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+/* 浮窗里空间充裕，对话区可以给得更高 */
+.xvoice-float .xvoice-chat {
+    min-height: 260px;
+    max-height: 46vh;
+}
+
+/* ── 播放器 ── */
+.xvoice-picker {
+    margin-bottom: 10px;
+}
+
+.xvoice-picker summary {
+    cursor: pointer;
+    font-size: 0.9em;
+    opacity: 0.85;
+    padding: 2px 0;
+    user-select: none;
+}
+
+.xvoice-msg-list {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    border-radius: 4px;
+    padding: 4px;
+    margin-top: 6px;
+}
+
+.xvoice-pick {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.xvoice-pick:hover {
+    background: var(--white20a, rgb(255 255 255 / 8%));
+}
+
+.xvoice-pick-name {
+    flex: none;
+    max-width: 6em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
+.xvoice-pick-user .xvoice-pick-name {
+    opacity: 0.45;
+}
+
+.xvoice-pick-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.xvoice-player-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.xvoice-player-bar .menu_button {
+    flex: none;
+    min-width: 44px;
+    padding: 6px 10px;
+    font-size: 1em;
+    line-height: 1;
+}
+
+.xvoice-player-bar .menu_button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.xvoice-play-btn {
+    font-size: 1.2em !important;
+    min-width: 56px !important;
+}
+
+.xvoice-player-status {
+    text-align: center;
+    font-size: 0.85em;
+    opacity: 0.75;
+    margin-bottom: 8px;
+}
+
+.xvoice-lines {
+    min-height: 130px;
+    max-height: 32vh;
+    overflow-y: auto;
+    border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.xvoice-line {
+    display: flex;
+    gap: 8px;
+    padding: 5px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.88em;
+    line-height: 1.5;
+}
+
+.xvoice-line:hover {
+    background: var(--white20a, rgb(255 255 255 / 8%));
+}
+
+.xvoice-line-active {
+    background: var(--white30a, rgb(255 255 255 / 14%));
+    color: var(--golden, #d8b25f);
+}
+
+.xvoice-line-no {
+    flex: none;
+    opacity: 0.45;
+    font-size: 0.85em;
+    min-width: 1.6em;
+    text-align: right;
+    padding-top: 1px;
+}
+
+.xvoice-line-text {
+    flex: 1;
+    word-break: break-word;
+}
+
+.xvoice-line-who {
+    flex: none;
+    max-width: 5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85em;
+    opacity: 0.7;
+    color: var(--golden, #d8b25f);
+}
+
+/* 用 :not([hidden]) 而不是裸 display —— 否则会盖掉 hidden 属性自带的 display:none */
+.xvoice-wpane:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── 遮罩层（移动端底部抽屉用） ── */
+.xvoice-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgb(0 0 0 / 50%);
+    z-index: 2999;
+}
+
+.xvoice-backdrop-show {
+    display: block;
+}
+
+/* ── 底部抽屉模式 ── */
+.xvoice-float--mobile {
+    /* 覆盖桌面浮窗的定位和内联样式 */
+    left: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    height: 88vh;
+    max-height: 88vh;
+    min-height: 50vh;
+    border-radius: 14px 14px 0 0;
+    resize: none;
+    animation: xvoice-slide-up 0.2s ease-out;
+}
+
+@keyframes xvoice-slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.xvoice-float--mobile .xvoice-float-bar {
+    cursor: default;
+    justify-content: center;
+    padding: 10px 12px 6px;
+    position: relative;
+}
+
+/* 拖拽指示条：移动端的通用"向下拽关闭"暗示 */
+.xvoice-float--mobile .xvoice-sheet-handle {
+    display: block;
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--SmartThemeBodyColor, #999);
+    opacity: 0.3;
+}
+
+.xvoice-float--mobile .xvoice-float-close {
+    position: absolute;
+    right: 12px;
+    top: 8px;
+}
+
+/* 页签横滚，手指不用挤 */
+.xvoice-float--mobile .xvoice-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.xvoice-float--mobile .xvoice-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.xvoice-float--mobile .xvoice-tab {
+    flex: none;
+    padding: 8px 14px;
+    font-size: 0.95em;
+}
+
+/* 全局触控热区：按钮和可点击行至少 44px */
+.xvoice-float--mobile .menu_button {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.95em;
+}
+
+.xvoice-float--mobile .xvoice-pick,
+.xvoice-float--mobile .xvoice-line,
+.xvoice-float--mobile .xvoice-voice,
+.xvoice-float--mobile .xvoice-rule-head,
+.xvoice-float--mobile .xvoice-step {
+    min-height: 44px;
+    padding: 8px;
+    align-items: center;
+}
+
+.xvoice-float--mobile .xvoice-player-bar .menu_button {
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 1.2em;
+}
+
+.xvoice-float--mobile .xvoice-play-btn {
+    min-width: 60px !important;
+    font-size: 1.4em !important;
+}
+
+/* 输入框在底部，虚拟键盘弹出时自动滚上来 */
+.xvoice-float--mobile .xvoice-input-row textarea {
+    font-size: 16px; /* 防止 iOS 自动缩放 */
+}
+
+.xvoice-float--mobile .xvoice-float-body {
+    padding: 10px;
+}

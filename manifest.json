@@ -1,0 +1,12 @@
+{
+    "display_name": "xvoice",
+    "loading_order": 10,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "",
+    "version": "0.1.0",
+    "homePage": "",
+    "update_notes": "0.1.0 初始骨架：统一 LLM 通道、MiniMax / Azure TTS、正则清洗管线、AI 配置助手"
+}
