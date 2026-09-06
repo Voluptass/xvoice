@@ -3,13 +3,15 @@ import { testConnection, listModels } from '../core/llm.js';
 import { chat } from '../assistant/agent.js';
 import { stripCalls } from '../assistant/protocol.js';
 import { renderFields, bindFields, escapeHtml } from './form.js';
+import { createFloatingPanel } from './floating.js';
 
-const MODEL_LIST_ID = 'xvoice-model-options';
+let modelPicker = null;
+let availableModels = [];
 
 const LLM_FIELDS = [
     { key: 'apiUrl', label: 'API 地址', type: 'text', hint: '需要带版本段，例如 https://api.openai.com/v1' },
     { key: 'apiKey', label: 'API Key', type: 'password' },
-    { key: 'model', label: '模型', type: 'text', datalist: MODEL_LIST_ID, hint: '拉取后点输入框可直接选，也能输入关键字过滤' },
+    { key: 'model', label: '模型', type: 'text', hint: '可手动填写模型 ID，或点击右侧按钮从已拉取列表选择' },
     { key: 'maxTokens', label: '最大输出长度', type: 'number', min: 256, max: 32000, step: 256, hint: '回答被截断时调大' },
     { key: 'stream', label: '流式输出', type: 'checkbox' },
     { key: 'bypassProxy', label: '绕过酒馆后端直连', type: 'checkbox', hint: '默认经酒馆转发，直连要求目标接口允许跨域' },
@@ -74,16 +76,59 @@ async function runTest(pane) {
     status.classList.toggle('xvoice-error', !ok);
 }
 
-/** 拉取模型灌进 datalist，输入框随即获得原生下拉与过滤。 */
+function renderModelPicker(body, filter = '') {
+    const query = String(filter).trim().toLowerCase();
+    const list = body.querySelector('[data-xv-model-list]');
+    if (!list) return;
+    const models = availableModels.filter((id) => !query || id.toLowerCase().includes(query));
+    list.innerHTML = models.length
+        ? models.map((id) => `<button type="button" class="xvoice-model-option" data-model="${escapeHtml(id)}">${escapeHtml(id)}</button>`).join('')
+        : '<p class="xvoice-hint">没有匹配的模型。</p>';
+}
+
+function openModelPicker(pane) {
+    if (!availableModels.length) return;
+    modelPicker.open();
+    renderModelPicker(modelPicker.body);
+    modelPicker.body.querySelector('[data-xv-model-search]')?.focus();
+}
+
+function createModelPicker(pane) {
+    return createFloatingPanel({
+        title: '选择模型',
+        onFirstOpen: (body) => {
+            body.innerHTML = `<input class="text_pole xvoice-model-search" data-xv-model-search placeholder="搜索模型…" autocomplete="off">
+                <div class="xvoice-model-list" data-xv-model-list></div>`;
+            body.addEventListener('input', (event) => {
+                if (event.target.matches('[data-xv-model-search]')) renderModelPicker(body, event.target.value);
+            });
+            body.addEventListener('click', (event) => {
+                const option = event.target.closest('[data-model]');
+                if (!option) return;
+                const field = pane.querySelector('[data-xv-key="model"]');
+                if (field) {
+                    field.value = option.dataset.model;
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                modelPicker.close();
+            });
+            renderModelPicker(body);
+        },
+    });
+}
+
+/** 拉取模型后放入独立选择窗口，避免原生 datalist 被主浮窗裁剪。 */
 async function loadModels(pane) {
     const status = pane.querySelector('[data-xv-model-status]');
     status.textContent = '拉取中…';
     status.classList.remove('xvoice-error');
     try {
         const models = await listModels(getActiveLlmProfile().profile);
-        pane.querySelector(`#${MODEL_LIST_ID}`).innerHTML = models
-            .map((id) => `<option value="${escapeHtml(id)}"></option>`).join('');
-        status.textContent = `已拉取 ${models.length} 个模型，点模型输入框选择`;
+        availableModels = models.map(String).filter(Boolean);
+        pane.querySelector('[data-as="pick-model"]').disabled = !availableModels.length;
+        renderModelPicker(modelPicker.body);
+        status.textContent = `已拉取 ${availableModels.length} 个模型，可打开独立窗口选择`;
+        openModelPicker(pane);
     } catch (e) {
         status.textContent = e.message;
         status.classList.add('xvoice-error');
@@ -96,9 +141,9 @@ function paneHtml() {
     return `<details class="xvoice-llm-config"${configured ? '' : ' open'}>
             <summary>助手使用的模型${configured ? '' : '（请先填写）'}</summary>
             ${renderFields(LLM_FIELDS)}
-            <datalist id="${MODEL_LIST_ID}"></datalist>
             <div class="xvoice-row">
                 <button class="menu_button" data-as="models">拉取模型列表</button>
+                <button class="menu_button" data-as="pick-model" disabled>选择模型</button>
                 <span class="xvoice-status" data-xv-model-status></span>
             </div>
             <div class="xvoice-row">
@@ -121,6 +166,7 @@ const WELCOME = '我能帮你排查朗读没声音、配置正则、挑音色和
 
 export function mountAssistantTab(pane) {
     pane.innerHTML = paneHtml();
+    modelPicker = createModelPicker(pane);
     const refresh = bindFields(pane, LLM_FIELDS, () => getActiveLlmProfile().profile, saveSettings);
     document.addEventListener('xvoice:settings-changed', refresh);
     bubble(pane, 'assistant', WELCOME);
@@ -130,6 +176,7 @@ export function mountAssistantTab(pane) {
         const act = event.target.closest('[data-as]')?.dataset.as;
         if (act === 'test') return runTest(pane);
         if (act === 'models') return loadModels(pane);
+        if (act === 'pick-model') return openModelPicker(pane);
         if (act === 'diagnose') return send(pane, '帮我做一次完整自检，说明当前配置有什么问题、怎么修。');
         if (act === 'send') {
             const text = input.value;

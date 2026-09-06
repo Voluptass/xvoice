@@ -18,13 +18,16 @@ const SCRIPT_PROMPT = `你是一位广播剧导演。把下面这段角色扮演
 
 规则：
 - 按正文出现顺序拆，不要重排、不要增删剧情。
-- 对白归说话的角色，旁白、动作、心理描写归「${NARRATOR}」。
+- 对白归说话的角色，叙述性旁白归「${NARRATOR}」；动作和心理活动也要分类，不能伪装成对白。
+- 系统提示、状态栏、作者注释、思维链、Markdown/JSON 说明都不是台词，必须丢弃。
+- type 只能是 dialogue、narration、thought、action 之一：实际说出口的是 dialogue，叙述性旁白是 narration，内心活动是 thought，动作/镜头描述是 action。
+- 每条 text 只能是原文中已有的内容，不要补写、总结或解释；不要保留“角色名：”前缀、括号动作或格式符号。
 - speaker 用正文里出现的角色名；正文没写名字但能判断是谁在说，就用你判断的那个名字，全篇保持一致。
 - text 去掉引号和星号，只留要念出来的字。
 - 只输出 JSON，不要解释、不要代码块围栏。
 
 输出格式：
-{"lines":[{"speaker":"角色名","text":"要念的话"}]}
+{"lines":[{"type":"dialogue","speaker":"角色名","text":"要念的话"}]}
 
 正文：
 `;
@@ -54,11 +57,39 @@ function parseJson(raw) {
     }
 }
 
-function normalizeLines(payload) {
+const NON_DIALOGUE_SPEAKER = /^(系统|system|assistant|user|作者|注释|提示|状态|思考|thought|narration|旁白)$/i;
+const ACTION_ONLY = /^[（(【\[［].*[）)】\]］]$/s;
+const LINE_TYPES = new Set(['dialogue', 'narration', 'thought', 'action']);
+const SPEAKER_TYPE_ALIASES = new Map([['旁白', 'narration'], ['内心', 'thought'], ['心理', 'thought'], ['动作', 'action']]);
+
+function cleanLineText(value, speaker) {
+    let text = String(value || '').trim()
+        .replace(/^```(?:text|markdown)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .replace(/^[“”"「」『』]+|[“”"「」『』]+$/g, '')
+        .replace(/^[*_]+|[*_]+$/g, '')
+        .trim();
+    // 模型有时把角色名又复制进 text，去掉这个机械前缀但不改正文中的冒号。
+    if (speaker && speaker !== NARRATOR) {
+        const escaped = speaker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        text = text.replace(new RegExp(`^${escaped}\\s*[:：]\\s*`, 'i'), '').trim();
+    }
+    return text;
+}
+
+/** 统一模型输出格式，并在本地过滤系统信息和纯动作行。 */
+export function normalizeLines(payload) {
     const lines = (payload?.lines || [])
-        .map((l) => ({ speaker: String(l?.speaker || NARRATOR).trim() || NARRATOR, text: String(l?.text || '').trim() }))
-        .filter((l) => l.text);
-    if (!lines.length) throw new Error('模型没有拆出任何台词，请换一条内容更完整的消息。');
+        .map((l) => {
+            const speaker = String(l?.speaker || NARRATOR).replace(/[\n\r]/g, ' ').trim() || NARRATOR;
+            const declaredType = String(l?.type || '').trim().toLowerCase();
+            const type = LINE_TYPES.has(declaredType)
+                ? declaredType
+                : SPEAKER_TYPE_ALIASES.get(speaker) || (speaker === NARRATOR ? 'narration' : 'dialogue');
+            return { type, speaker, text: cleanLineText(l?.text, speaker) };
+        })
+        .filter(({ speaker, text }) => text && !NON_DIALOGUE_SPEAKER.test(speaker) && !ACTION_ONLY.test(text));
+    if (!lines.length) throw new Error('模型没有拆出任何可朗读内容，请换一条内容更完整的消息。');
     return lines;
 }
 
@@ -133,8 +164,19 @@ export async function assignVoices(cast, signal) {
 export async function direct({ text, signal } = {}) {
     const source = text || lastCharacterMessage();
     if (!source) throw new Error('当前聊天里还没有角色回复。');
-    const lines = await writeScript(source, signal);
+    const lines = (await writeScript(source, signal)).filter(({ type }) => type === 'dialogue' || type === 'narration');
     const cast = castOf(lines);
     const { mode, roleVoices, missing } = await assignVoices(cast, signal);
     return { lines, cast, roleVoices, missing, mode };
+}
+
+/**
+ * 提取台词：按对话顺序返回角色和台词，过滤旁白。
+ * @returns {Promise<Array<{speaker: string, text: string}>>}
+ */
+export async function extractDialogue({ text, signal } = {}) {
+    const source = text || lastCharacterMessage();
+    if (!source) throw new Error('当前聊天里还没有角色回复。');
+    const lines = await writeScript(source, signal);
+    return lines.filter(({ type }) => type === 'dialogue');
 }

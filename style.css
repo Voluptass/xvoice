@@ -509,6 +509,51 @@
     color: var(--golden, #d8b25f);
 }
 
+/* ── 提取对话结果 ── */
+.xvoice-extract-result {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 10px;
+    font-size: 0.88em;
+}
+
+.xvoice-extract-status {
+    font-size: 0.9em;
+    opacity: 0.8;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+}
+
+.xvoice-extract-line {
+    display: flex;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    line-height: 1.5;
+    margin-bottom: 2px;
+}
+
+.xvoice-extract-line:hover {
+    background: var(--white20a, rgb(255 255 255 / 8%));
+}
+
+.xvoice-extract-speaker {
+    flex: none;
+    min-width: 4em;
+    font-weight: bold;
+    color: var(--golden, #d8b25f);
+    opacity: 0.85;
+}
+
+.xvoice-extract-text {
+    flex: 1;
+    word-break: break-word;
+}
+
 /* 用 :not([hidden]) 而不是裸 display —— 否则会盖掉 hidden 属性自带的 display:none */
 .xvoice-wpane:not([hidden]) {
     display: flex;
@@ -639,4 +684,38 @@
     padding: 10px;
     padding-bottom: 10px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── 模型选择浮窗 ── */
+.xvoice-model-search {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.xvoice-model-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.xvoice-model-option {
+    display: block;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    border-radius: 4px;
+    background: var(--black30a, rgb(0 0 0 / 20%));
+    color: var(--SmartThemeBodyColor);
+    text-align: left;
+    cursor: pointer;
+    word-break: break-all;
+}
+
+.xvoice-model-option:hover,
+.xvoice-model-option:focus {
+    background: var(--white20a, rgb(255 255 255 / 8%));
+    outline: none;
 }

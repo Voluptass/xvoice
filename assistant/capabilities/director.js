@@ -1,6 +1,6 @@
 import { registerAll } from '../registry.js';
 import { getSettings, saveSettings } from '../../core/settings.js';
-import { direct, writeScript, castOf } from '../../core/director.js';
+import { direct, writeScript, castOf, extractDialogue } from '../../core/director.js';
 import { speakScript } from '../../core/pipeline.js';
 import { lastCharacterMessage } from '../../core/chat-source.js';
 
@@ -72,6 +72,15 @@ registerAll([
             directorSettings().roleVoices = {};
             saveSettings();
             return { cleared: count };
+        },
+    },
+    {
+        id: 'director.extractDialogue',
+        summary: '提取台词：只拆出角色名和对应的台词，不处理音色分配',
+        params: { text: '可选，要提取的正文，留空则取最近一条角色回复' },
+        handler: async ({ text } = {}) => {
+            const result = await extractDialogue({ text });
+            return { 角色数: result.length, dialogue: result };
         },
     },
 ]);

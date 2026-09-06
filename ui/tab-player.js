@@ -1,6 +1,6 @@
 import { eventSource, event_types } from '../../../../../script.js';
 import { player, onPipelineEvent, speak, speakScript, prepare } from '../core/pipeline.js';
-import { direct } from '../core/director.js';
+import { direct, extractDialogue, castOf, assignVoices } from '../core/director.js';
 import { State } from '../player/player.js';
 import { recentMessages, messageAt } from '../core/chat-source.js';
 import { speakHandy } from './hotkey.js';
@@ -69,6 +69,7 @@ function paneHtml() {
         </details>
         <div class="xvoice-row">
             <button class="menu_button" data-pl="direct" title="让 AI 把最近一条角色回复拆成台本，按角色分音色朗读">🎬 AI 导演</button>
+            <button class="menu_button" data-pl="extract" title="提取最近一条角色回复的台词，只要角色名和对话">📝 提取对话</button>
             <span class="xvoice-status" data-pl-director></span>
         </div>
         <div class="xvoice-player-bar">
@@ -79,7 +80,8 @@ function paneHtml() {
             <button class="menu_button" data-pl="stop" title="停止">■</button>
         </div>
         <div class="xvoice-player-status" data-pl-status>未在播放</div>
-        <div class="xvoice-lines" data-pl-lines></div>`;
+        <div class="xvoice-lines" data-pl-lines></div>
+        <div class="xvoice-extract-result" data-pl-extract style="display:none"></div>`;
 }
 
 /** 只在分段内容变化时重建列表，避免每次状态更新都重绘整份台词。 */
@@ -109,8 +111,8 @@ function update(pane, snapshot) {
     const box = pane.querySelector('[data-pl-lines]');
     renderLines(box, chunks, index);
     if (index >= 0) scrollToActive(box);
-    // 导演按钮不依赖已有分段，别跟着播放控件一起禁用
-    pane.querySelectorAll('[data-pl]:not([data-pl="direct"])').forEach((btn) => {
+    // 导演和提取对话按钮不依赖已有分段，别跟着播放控件一起禁用
+    pane.querySelectorAll('[data-pl]:not([data-pl="direct"]):not([data-pl="extract"])').forEach((btn) => {
         btn.disabled = !chunks.length;
     });
 }
@@ -142,6 +144,41 @@ async function runDirector(pane) {
     }
 }
 
+async function runExtract(pane) {
+    const resultBox = pane.querySelector('[data-pl-extract]');
+    const btn = pane.querySelector('[data-pl="extract"]');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    resultBox.style.display = 'block';
+    resultBox.classList.remove('xvoice-error');
+    resultBox.textContent = '正在提取对话…';
+    try {
+        const lines = await extractDialogue();
+        if (!lines.length) {
+            resultBox.textContent = '没有提取到对话';
+            return;
+        }
+        const cast = castOf(lines);
+        const { mode, roleVoices, missing } = await assignVoices(cast);
+        const castText = cast.join('、');
+        let status = `${lines.length} 句 · ${castText}`;
+        if (missing.length) {
+            status += mode === 'manual'
+                ? `（${missing.join('、')} 还没配音色，用默认）`
+                : `（${missing.join('、')} 未挑到音色，用默认）`;
+        }
+        // 播放器列表会在 speakScript() 触发后显示同一批台词；提取框只保留摘要，
+        // 避免把相同内容渲染两遍（尤其在移动端会看起来像两个重叠的面板）。
+        resultBox.innerHTML = `<div class="xvoice-extract-status">${escapeHtml(status)} · 已载入下方播放器列表</div>`;
+        speakScript(lines);
+    } catch (e) {
+        resultBox.textContent = e.message;
+        resultBox.classList.add('xvoice-error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 const ACTIONS = {
     toggle: () => (player.chunks.length ? player.toggle() : speakHandy()),
     prev: () => player.prev(),
@@ -160,6 +197,7 @@ export function mountPlayerTab(pane) {
 
         const act = event.target.closest('[data-pl]')?.dataset.pl;
         if (act === 'direct') return runDirector(pane);
+        if (act === 'extract') return runExtract(pane);
         if (act) return ACTIONS[act]?.();
 
         const line = event.target.closest('.xvoice-line')?.dataset.line;
