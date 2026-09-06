@@ -309,7 +309,8 @@
     border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
     border-radius: 8px;
     box-shadow: 0 8px 32px rgb(0 0 0 / 50%);
-    z-index: 3000;
+    /* 酒馆抽屉打开时 #top-settings-holder 为 4005，必须压过它，但留在魔法棒菜单(29999)之下 */
+    z-index: 4010;
     resize: both;
     overflow: hidden;
 }
@@ -518,9 +519,13 @@
 .xvoice-backdrop {
     display: none;
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     background: rgb(0 0 0 / 50%);
-    z-index: 2999;
+    z-index: 4009;
 }
 
 .xvoice-backdrop-show {
@@ -530,23 +535,17 @@
 /* ── 底部抽屉模式 ── */
 .xvoice-float--mobile {
     /* 覆盖桌面浮窗的定位和内联样式 */
-    /* visualViewport 缩小时（例如安卓软键盘）由 JS 提供 bottom inset；旧浏览器回退到 0。 */
-    left: 0 !important;
-    top: auto !important;
-    bottom: 0 !important;
-    bottom: env(safe-area-inset-bottom, 0px) !important;
-    bottom: calc(var(--xvoice-viewport-bottom-inset, 0px) + env(safe-area-inset-bottom, 0px)) !important;
-    right: 0 !important;
-    width: 100% !important;
+    /* 酒馆给 html 加了 transform，fixed 元素以 html 为参照；移动端 body 又是 fixed，
+       html 高度为 0，所以不能用 bottom 贴底，只能用 top 从 visualViewport 算出位置。 */
+    left: var(--xvoice-viewport-left, 0px) !important;
+    top: calc(var(--xvoice-viewport-top, 0px) + var(--xvoice-viewport-height, 100vh) - var(--xvoice-sheet-height, 88vh)) !important;
+    right: auto !important;
+    bottom: auto !important;
     width: var(--xvoice-viewport-width, 100vw) !important;
     max-width: 100%;
     min-width: 0;
-    height: 88vh !important;
-    max-height: 88vh !important;
-    min-height: 50vh;
     height: var(--xvoice-sheet-height, 88vh) !important;
     max-height: calc(var(--xvoice-viewport-height, 100vh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    min-height: min(50vh, 280px);
     min-height: var(--xvoice-sheet-min-height, 280px);
     border-radius: 14px 14px 0 0;
     resize: none;

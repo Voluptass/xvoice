@@ -23,28 +23,22 @@ function viewportSize() {
     const viewport = window.visualViewport;
     const layoutWidth = window.innerWidth || document.documentElement.clientWidth;
     const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
-    const width = viewport && viewport.width ? viewport.width : layoutWidth;
-    const height = viewport && viewport.height ? viewport.height : layoutHeight;
-    const offsetLeft = viewport && viewport.offsetLeft ? viewport.offsetLeft : 0;
-    const offsetTop = viewport && viewport.offsetTop ? viewport.offsetTop : 0;
     return {
-        width,
-        height,
-        offsetLeft,
-        offsetTop,
-        bottomInset: Math.max(0, layoutHeight - offsetTop - height),
+        width: viewport && viewport.width ? viewport.width : layoutWidth,
+        height: viewport && viewport.height ? viewport.height : layoutHeight,
+        offsetLeft: viewport && viewport.offsetLeft ? viewport.offsetLeft : 0,
+        offsetTop: viewport && viewport.offsetTop ? viewport.offsetTop : 0,
     };
 }
 
 function syncViewportVars(root) {
-    const { width, height, offsetLeft, offsetTop, bottomInset } = viewportSize();
+    const { width, height, offsetLeft, offsetTop } = viewportSize();
     root.style.setProperty('--xvoice-viewport-width', `${Math.round(width)}px`);
     root.style.setProperty('--xvoice-viewport-height', `${Math.round(height)}px`);
     root.style.setProperty('--xvoice-sheet-height', `${Math.round(height * SHEET_MAX)}px`);
     root.style.setProperty('--xvoice-sheet-min-height', `${Math.round(Math.min(280, height * 0.5))}px`);
     root.style.setProperty('--xvoice-viewport-left', `${Math.round(offsetLeft)}px`);
     root.style.setProperty('--xvoice-viewport-top', `${Math.round(offsetTop)}px`);
-    root.style.setProperty('--xvoice-viewport-bottom-inset', `${Math.round(bottomInset)}px`);
 }
 
 function loadPosition() {
