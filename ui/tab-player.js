@@ -73,14 +73,21 @@ function pickHtml(msg) {
 function renderPicker(pane) {
     const box = pane.querySelector('[data-msg-list]');
     if (!box) return;
-    const items = recentMessages(PICK_LIMIT);
+    const includeUser = !!getSettings().playback.includeUserMessages;
+    const items = recentMessages(PICK_LIMIT, includeUser);
     box.innerHTML = items.length
         ? items.map(pickHtml).join('')
-        : '<p class="xvoice-hint">当前聊天还没有消息。</p>';
+        : `<p class="xvoice-hint">${includeUser
+            ? '当前聊天还没有消息。'
+            : '还没有角色消息。想读自己的发言，勾选上面「也朗读我的发言」。'}</p>`;
 }
 
 function paneHtml() {
-    return `<details class="xvoice-picker" open>
+    return `<label class="checkbox_label xvoice-include-user">
+            <input type="checkbox" data-pl-include-user>
+            <span>也朗读我的发言</span>
+        </label>
+        <details class="xvoice-picker" open>
             <summary>选一条消息朗读</summary>
             <div class="xvoice-msg-list" data-msg-list></div>
         </details>
@@ -258,6 +265,15 @@ export function mountPlayerTab(pane) {
     const syncVolume = bindVolume(pane);
     syncVolume();
 
+    const includeToggle = pane.querySelector('[data-pl-include-user]');
+    const syncInclude = () => { includeToggle.checked = !!getSettings().playback.includeUserMessages; };
+    includeToggle.addEventListener('change', () => {
+        getSettings().playback.includeUserMessages = includeToggle.checked;
+        saveSettings();
+        renderPicker(pane);
+    });
+    syncInclude();
+
     pane.addEventListener('click', (event) => {
         if (event.target.closest('[data-extract-play]')) return playExtracted(pane);
 
@@ -277,7 +293,11 @@ export function mountPlayerTab(pane) {
         if (ev === 'player') update(pane, payload);
     });
 
-    document.addEventListener('xvoice:settings-changed', syncVolume);
+    document.addEventListener('xvoice:settings-changed', () => {
+        syncVolume();
+        syncInclude();
+        renderPicker(pane);
+    });
 
     // 新消息进来时刷新点播列表，否则列表永远停在打开浮窗那一刻
     [event_types.MESSAGE_RENDERED, event_types.CHARACTER_MESSAGE_RENDERED, event_types.CHAT_CHANGED]

@@ -24,6 +24,15 @@ export function lastCharacterMessage() {
     return '';
 }
 
+/** 最后一条可朗读的消息，用户发言也算（只跳过系统提示）。 */
+export function lastMessage() {
+    for (let i = chat.length - 1; i >= 0; i--) {
+        const m = chat[i];
+        if (m && !m.is_system) return m.mes;
+    }
+    return '';
+}
+
 /** 当前选中的文本，没有选中时返回空串。 */
 export function selectedText() {
     return window.getSelection()?.toString().trim() ?? '';
@@ -31,14 +40,16 @@ export function selectedText() {
 
 /**
  * 最近的若干条消息，最新的在前，供播放器里点播。
- * 系统提示不列（那不是给人听的），用户自己的发言保留但会标出来。
+ * 系统提示不列（那不是给人听的）；用户自己的发言默认不列，
+ * includeUser 为 true 时才加进来。
  * @returns {Array<{id: number, name: string, isUser: boolean, text: string}>}
  */
-export function recentMessages(limit = 12) {
+export function recentMessages(limit = 12, includeUser = false) {
     const out = [];
     for (let i = chat.length - 1; i >= 0 && out.length < limit; i--) {
         const m = chat[i];
         if (!m || m.is_system) continue;
+        if (!includeUser && m.is_user) continue;
         out.push({
             id: i,
             name: m.name || (m.is_user ? '你' : '角色'),

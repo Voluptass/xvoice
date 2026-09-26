@@ -550,6 +550,16 @@
 }
 
 /* ── 播放器 ── */
+.xvoice-include-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    font-size: 0.88em;
+    opacity: 0.9;
+    cursor: pointer;
+}
+
 .xvoice-picker {
     margin-bottom: 10px;
 }

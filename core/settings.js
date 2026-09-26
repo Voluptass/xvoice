@@ -53,6 +53,7 @@ const DEFAULTS = {
         stripEmoji: true,
         stripUrl: true,
         quotedOnly: false,
+        includeUserMessages: false,
     },
     assistant: {
         sessions: [],

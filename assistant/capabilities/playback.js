@@ -2,14 +2,14 @@ import { registerAll } from '../registry.js';
 import { getSettings, saveSettings } from '../../core/settings.js';
 import { prepare, emptyReason } from '../../core/pipeline.js';
 
-const FIELDS = ['quotedOnly', 'stripEmoji', 'stripUrl', 'volume', 'chunkSize', 'autoRead'];
+const FIELDS = ['quotedOnly', 'stripEmoji', 'stripUrl', 'volume', 'chunkSize', 'autoRead', 'includeUserMessages'];
 
 const SAMPLE = '<think>盘算中</think>“你终于来了。”她放下杯子，*望向窗外*。【好感度+3】';
 
 registerAll([
     {
         id: 'playback.status',
-        summary: '查看朗读设置（是否只念引号内对白、是否过滤表情与网址、音量、分段长度、自动朗读）',
+        summary: '查看朗读设置（是否只念引号内对白、是否过滤表情与网址、音量、分段长度、自动朗读、是否包含用户发言）',
         handler: () => getSettings().playback,
     },
     {
@@ -24,6 +24,7 @@ registerAll([
             volume: '音量，0~1',
             chunkSize: '分段长度，越小越快出声',
             autoRead: '是否自动朗读角色新消息',
+            includeUserMessages: '是否也朗读用户自己发送的消息，默认 false（只念角色消息）',
         },
         handler: (patch) => {
             const target = getSettings().playback;
