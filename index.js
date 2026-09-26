@@ -36,6 +36,7 @@ function bindFeedback() {
  * 这里替用户刷新一次——留一点时间让 ST 的提示先画出来。
  */
 export function onExtensionUpdate() {
+    console.info('[xvoice] ST 触发了 update 钩子，1.2 秒后刷新页面');
     setTimeout(() => location.reload(), 1200);
 }
 
