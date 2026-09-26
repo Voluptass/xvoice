@@ -774,6 +774,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 8px;
     font-size: 0.9em;
     opacity: 0.85;
@@ -785,6 +786,19 @@
 .xvoice-extract-status .menu_button {
     flex: none;
     opacity: 1;
+}
+
+.xvoice-extract-actions {
+    display: inline-flex;
+    gap: 6px;
+    flex: none;
+}
+
+.xvoice-extract-warn {
+    font-size: 0.85em;
+    line-height: 1.4;
+    color: var(--warning, #e57373);
+    margin-bottom: 8px;
 }
 
 .xvoice-extract-line {

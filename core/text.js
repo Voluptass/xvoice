@@ -116,6 +116,14 @@ const NAME_COLON = new RegExp(`(${NAME})[*_\\s]*[：:]`, 'g');
 const SPEAKER_AFTER = new RegExp(`^\\s*[，,]?\\s*(${NAME})\\s*(?:说道|问道|答道|笑道|冷笑道|苦笑道|低声说|回答|开口|说|道|问|答|喊|叫)`);
 const SPEAK_VERB_TAIL = /(?:说道|问道|答道|笑道|冷笑道|苦笑道|低声说|回答|开口|说|道|问|答|喊|叫)$/;
 const BAD_NAME = /[了着的地得笑怒叹哭想，,。！？!?：:；;、()（）\[\]【】]/;
+// 元信息字段名，不应被当成说话人
+const META_WORDS = 'date|time|datetime|day|week|weekday|location|loc|place|status|state|name|id|uid|turn|round|depth|index|mood|weather|season|hp|mp|level|时间|日期|地点|位置|状态|天气|心情|季节|回合|好感度|等级';
+const META_KEY = new RegExp(`^(?:${META_WORDS})$`, 'i');
+// 看起来像日期 / 时间 / 纯数字的引号内容，不当对白
+const META_TEXT = new RegExp(
+    `^(?:${META_WORDS}|\\d{4}年\\d{1,2}月\\d{1,2}日.*|\\d{1,4}[-/.]\\d{1,2}[-/.]\\d{1,2}|\\d{1,2}:\\d{2}(?::\\d{2})?|[-+]?\\d+(?:\\.\\d+)?)$`,
+    'i',
+);
 
 /** 把候选名字清理成干净的角色名，不像名字就返回空串。 */
 function cleanName(name) {
@@ -125,7 +133,11 @@ function cleanName(name) {
         prev = s;
         s = s.replace(SPEAK_VERB_TAIL, '');
     }
-    if (!s || s.length > 12 || BAD_NAME.test(s)) return '';
+    if (!s || s.length > 12) return '';
+    if (BAD_NAME.test(s)) return '';
+    if (/[=<>]/.test(s)) return '';   // 键值对 / 标签
+    if (/^\d+$/.test(s)) return '';     // 纯数字（回合号 / ID）
+    if (META_KEY.test(s)) return '';    // date / time / location ……
     return s;
 }
 
@@ -156,7 +168,7 @@ export function parseDialogue(raw) {
         let m;
         while ((m = DIALOGUE_QUOTE.exec(trimmed))) {
             const text = m[1].trim();
-            if (!text) continue;
+            if (!text || META_TEXT.test(text)) continue;
             found = true;
 
             // 优先用引号前面最近的那个「名字：」
@@ -176,4 +188,15 @@ export function parseDialogue(raw) {
     }
 
     return out;
+}
+
+/**
+ * 本地提取的可信度：能确定说话人的比例。低于 0.5 建议改用 AI。
+ * @param {Array<{speaker: string, text: string}>} lines
+ * @returns {number} 0~1
+ */
+export function dialogueConfidence(lines) {
+    if (!lines?.length) return 0;
+    const known = lines.filter((l) => l.speaker !== UNKNOWN_SPEAKER).length;
+    return known / lines.length;
 }

@@ -1,10 +1,10 @@
 import { eventSource, event_types } from '../../../../../script.js';
 import { player, onPipelineEvent, speak, speakScript, prepare, voiceFor } from '../core/pipeline.js';
-import { direct } from '../core/director.js';
+import { direct, extractDialogue, castOf, assignVoices } from '../core/director.js';
 import { State } from '../player/player.js';
 import { recentMessages, messageAt, lastCharacterMessage } from '../core/chat-source.js';
 import { getSettings, saveSettings } from '../core/settings.js';
-import { parseDialogue } from '../core/text.js';
+import { parseDialogue, dialogueConfidence } from '../core/text.js';
 import { speakHandy } from './hotkey.js';
 import { escapeHtml } from './form.js';
 import { ICON } from './icons.js';
@@ -211,6 +211,28 @@ async function runDirector(pane) {
     }
 }
 
+// 当前提取框里展示的台词，供「朗读」用（本地 / AI 共用）
+let extracted = [];
+
+function renderExtract(pane, lines, { source, low = false } = {}) {
+    extracted = lines;
+    const box = pane.querySelector('[data-pl-extract]');
+    const cast = [...new Set(lines.map((l) => l.speaker))];
+    const warn = low
+        ? '<div class="xvoice-extract-warn">⚠ 这段排版比较复杂，本地识别可能不准，建议点「AI 提取」。</div>'
+        : '';
+    box.innerHTML = `<div class="xvoice-extract-status">
+            <span>${escapeHtml(source)}提取 ${lines.length} 句 · ${escapeHtml(cast.join('、'))}</span>
+            <span class="xvoice-extract-actions">
+                <button type="button" class="menu_button" data-extract-ai
+                    title="用配置的模型重新提取，说话人更准">AI 提取</button>
+                <button type="button" class="menu_button" data-extract-play>朗读</button>
+            </span>
+        </div>
+        ${warn}
+        ${lines.map(extractLineHtml).join('')}`;
+}
+
 /** 本地提取：不调用 AI，瞬间出结果，只列出引号里的对白供核对。 */
 function runExtract(pane) {
     const resultBox = pane.querySelector('[data-pl-extract]');
@@ -222,26 +244,41 @@ function runExtract(pane) {
     const lines = localDialogue();
     if (!lines.length) {
         resultBox.textContent = lastCharacterMessage()
-            ? '没找到引号里的对白。排版复杂的话，点「AI 导演」让模型来拆。'
+            ? '没找到引号里的对白。排版复杂的话，点「AI 导演」或「AI 提取」。'
             : '当前聊天里还没有角色回复。';
         return;
     }
-    const cast = [...new Set(lines.map((l) => l.speaker))];
-    resultBox.innerHTML = `<div class="xvoice-extract-status">
-            <span>本地提取 ${lines.length} 句 · ${escapeHtml(cast.join('、'))}</span>
-            <button type="button" class="menu_button" data-extract-play>朗读</button>
-        </div>
-        ${lines.map(extractLineHtml).join('')}`;
+    renderExtract(pane, lines, { source: '本地', low: dialogueConfidence(lines) < 0.5 });
+}
+
+/** AI 提取：交给配置的模型判断说话人，复杂排版比本地准。 */
+async function runExtractAi(pane) {
+    const box = pane.querySelector('[data-pl-extract]');
+    const btn = box.querySelector('[data-extract-ai]');
+    if (btn) { btn.disabled = true; btn.textContent = '提取中…'; }
+    box.classList.remove('xvoice-error');
+    try {
+        const lines = await extractDialogue();
+        if (!lines.length) {
+            box.textContent = '没有提取到对话。';
+            return;
+        }
+        // 配音色失败不影响展示；朗读时未配的角色会用默认音色
+        await assignVoices(castOf(lines)).catch(() => {});
+        renderExtract(pane, lines, { source: 'AI' });
+    } catch (e) {
+        box.textContent = `AI 提取失败：${e.message}`;
+        box.classList.add('xvoice-error');
+    }
 }
 
 /** 用已保存的角色音色朗读提取结果；没配过的角色用默认音色。 */
 function playExtracted(pane) {
-    const lines = localDialogue();
-    if (!lines.length) return;
+    if (!extracted.length) return;
     const status = pane.querySelector('[data-pl-director]');
     status.classList.remove('xvoice-error');
-    status.textContent = `${lines.length} 句 · 用已配音色朗读`;
-    speakScript(lines);
+    status.textContent = `${extracted.length} 句 · 用已配音色朗读`;
+    speakScript(extracted);
 }
 
 const ACTIONS = {
@@ -291,6 +328,7 @@ export function mountPlayerTab(pane, ctx) {
 
     pane.addEventListener('click', (event) => {
         if (event.target.closest('[data-extract-play]')) return playExtracted(pane);
+        if (event.target.closest('[data-extract-ai]')) return runExtractAi(pane);
 
         const msgId = event.target.closest('[data-msg]')?.dataset.msg;
         if (msgId !== undefined) return speak(messageAt(msgId));

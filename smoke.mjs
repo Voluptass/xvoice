@@ -1,4 +1,4 @@
-import { clean, split, parseDialogue } from './core/text.js';
+import { clean, split, parseDialogue, dialogueConfidence } from './core/text.js';
 import { applyAll } from './regex/apply.js';
 import { inspect } from './regex/danger.js';
 import { fromStFormat, toStFormat, createEntry, BUILTIN_ENTRIES } from './regex/entry.js';
@@ -50,6 +50,18 @@ check('无法判断时标“未知”', parseDialogue('“谁在说话？”'), 
 check('【状态栏】不会被当成说话人', parseDialogue('【好感度+3】“继续走。”'), [{ speaker: '未知', text: '继续走。' }]);
 check('名字前有噪声也能认出', parseDialogue('他看起来有些紧张 爱丽丝：“你终于来了。”'),
     [{ speaker: '爱丽丝', text: '你终于来了。' }]);
+check('纯数字说话人（回合号）被拒',
+    parseDialogue('21：“你好。”'), [{ speaker: '未知', text: '你好。' }]);
+check('键值对说话人被拒',
+    parseDialogue('time=21：“你好。”'), [{ speaker: '未知', text: '你好。' }]);
+check('元信息字段名被拒',
+    parseDialogue('location：“你好。”'), [{ speaker: '未知', text: '你好。' }]);
+check('日期值不算对白', parseDialogue('date：“2020年4月2日星期四”'), []);
+check('时间值不算对白', parseDialogue('time：“21:38”'), []);
+check('可信度：全“未知”为 0',
+    dialogueConfidence(parseDialogue('“A。”')), 0);
+check('可信度：有说话人为 1',
+    dialogueConfidence(parseDialogue('爱丽丝：“A。”')), 1);
 
 console.log('\n[正则管线]');
 const rules = [
