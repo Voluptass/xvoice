@@ -161,10 +161,10 @@ function focusFirst(body) {
 // ── 公共接口 ────────────────────────────────────
 
 /**
- * @param {{title: string, onFirstOpen?: (body: HTMLElement) => void}} options
+ * @param {{title: string, onFirstOpen?: (body: HTMLElement) => void, onShow?: () => void}} options
  * @returns {{body: HTMLElement, open: Function, close: Function, toggle: Function}}
  */
-export function createFloatingPanel({ title, onFirstOpen }) {
+export function createFloatingPanel({ title, onFirstOpen, onShow }) {
     const root = buildShell(title);
     const body = root.querySelector('.xvoice-float-body');
     const bar = root.querySelector('.xvoice-float-bar');
@@ -215,6 +215,7 @@ export function createFloatingPanel({ title, onFirstOpen }) {
             clampIntoView(root);
         }
         focusFirst(body);
+        onShow?.();
     };
 
     root.querySelector('.xvoice-float-close').addEventListener('click', close);

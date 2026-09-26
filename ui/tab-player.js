@@ -70,16 +70,25 @@ function pickHtml(msg) {
     </button>`;
 }
 
+function scrollPickerToBottom(pane) {
+    const box = pane.querySelector('[data-msg-list]');
+    if (box) box.scrollTop = box.scrollHeight;
+}
+
 function renderPicker(pane) {
     const box = pane.querySelector('[data-msg-list]');
     if (!box) return;
     const includeUser = !!getSettings().playback.includeUserMessages;
-    const items = recentMessages(PICK_LIMIT, includeUser);
+    // 旧 → 新：最新的一条排在最底下，和聊天记录的顺序一致，往上滑看更早的
+    const items = recentMessages(PICK_LIMIT, includeUser).reverse();
+    // 用户正翻看更早的消息时不要把他拽回底部
+    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 8;
     box.innerHTML = items.length
         ? items.map(pickHtml).join('')
         : `<p class="xvoice-hint">${includeUser
             ? '当前聊天还没有消息。'
             : '还没有角色消息。想读自己的发言，勾选上面「也朗读我的发言」。'}</p>`;
+    if (wasAtBottom) scrollPickerToBottom(pane);
 }
 
 function paneHtml() {
@@ -259,7 +268,7 @@ function extractLineHtml(line) {
     </div>`;
 }
 
-export function mountPlayerTab(pane) {
+export function mountPlayerTab(pane, ctx) {
     pane.innerHTML = paneHtml();
     renderPicker(pane);
     const syncVolume = bindVolume(pane);
@@ -273,6 +282,12 @@ export function mountPlayerTab(pane) {
         renderPicker(pane);
     });
     syncInclude();
+
+    // 面板每次打开、或折叠后再展开时，都把消息列表滚到最新一条
+    ctx?.onShow?.(() => scrollPickerToBottom(pane));
+    pane.querySelector('.xvoice-picker')?.addEventListener('toggle', (event) => {
+        if (event.target.open) scrollPickerToBottom(pane);
+    });
 
     pane.addEventListener('click', (event) => {
         if (event.target.closest('[data-extract-play]')) return playExtracted(pane);

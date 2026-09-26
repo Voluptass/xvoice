@@ -74,12 +74,18 @@ function mountTab(tab, body, ctx) {
 /** @returns {{open: (tab?: string) => void, close: Function}} */
 export function createMainWindow() {
     let body = null;
+    const showHandlers = new Set();
     const win = createFloatingPanel({
         title: 'xvoice',
+        // 面板每次打开时通知各页签
+        onShow: () => showHandlers.forEach((fn) => fn()),
         onFirstOpen: (el) => {
             body = el;
             body.innerHTML = shellHtml();
-            const ctx = { activate: (id) => activate(body, id) };
+            const ctx = {
+                activate: (id) => activate(body, id),
+                onShow: (fn) => showHandlers.add(fn),
+            };
             body.addEventListener('click', (event) => {
                 const id = event.target.closest('[data-wtab]')?.dataset.wtab;
                 if (id) activate(body, id);
