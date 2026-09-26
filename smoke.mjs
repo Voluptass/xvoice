@@ -1,4 +1,4 @@
-import { clean, split } from './core/text.js';
+import { clean, split, parseDialogue } from './core/text.js';
 import { applyAll } from './regex/apply.js';
 import { inspect } from './regex/danger.js';
 import { fromStFormat, toStFormat, createEntry } from './regex/entry.js';
@@ -35,6 +35,21 @@ checkThat('按句切分且不超长', chunks.every((c) => c.length <= 8), JSON.s
 checkThat('内容无丢失', chunks.join('') === '第一句。第二句！第三句？', JSON.stringify(chunks));
 const long = split('这是一个非常长的句子里面完全没有任何句号所以必须被硬切开来处理', 10);
 checkThat('超长单句被硬切', long.length > 1 && long.every((c) => c.length <= 10), JSON.stringify(long));
+
+console.log('\n[本地对白提取]');
+check('名字前缀', parseDialogue('爱丽丝：“你好。”她放下杯子。'), [{ speaker: '爱丽丝', text: '你好。' }]);
+check('引号后置说话人', parseDialogue('“你终于来了。”爱丽丝说。'), [{ speaker: '爱丽丝', text: '你终于来了。' }]);
+check('markdown 加粗 + 跨行说话人', parseDialogue('**爱丽丝**：\n“第一句。”\n“第二句。”'),
+    [{ speaker: '爱丽丝', text: '第一句。' }, { speaker: '爱丽丝', text: '第二句。' }]);
+check('说话人向后延续', parseDialogue('“A。”爱丽丝说。“B。”'),
+    [{ speaker: '爱丽丝', text: 'A。' }, { speaker: '爱丽丝', text: 'B。' }]);
+check('一行多个说话人', parseDialogue('“A。”爱丽丝说。“B。”鲍勃说。'),
+    [{ speaker: '爱丽丝', text: 'A。' }, { speaker: '鲍勃', text: 'B。' }]);
+check('无引号返回空', parseDialogue('旁白：这里没有任何引号。'), []);
+check('无法判断时标“未知”', parseDialogue('“谁在说话？”'), [{ speaker: '未知', text: '谁在说话？' }]);
+check('【状态栏】不会被当成说话人', parseDialogue('【好感度+3】“继续走。”'), [{ speaker: '未知', text: '继续走。' }]);
+check('名字前有噪声也能认出', parseDialogue('他看起来有些紧张 爱丽丝：“你终于来了。”'),
+    [{ speaker: '爱丽丝', text: '你终于来了。' }]);
 
 console.log('\n[正则管线]');
 const rules = [

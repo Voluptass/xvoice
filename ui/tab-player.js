@@ -1,9 +1,10 @@
 import { eventSource, event_types } from '../../../../../script.js';
 import { player, onPipelineEvent, speak, speakScript, prepare, voiceFor } from '../core/pipeline.js';
-import { direct, extractDialogue, castOf, assignVoices } from '../core/director.js';
+import { direct } from '../core/director.js';
 import { State } from '../player/player.js';
-import { recentMessages, messageAt } from '../core/chat-source.js';
+import { recentMessages, messageAt, lastCharacterMessage } from '../core/chat-source.js';
 import { getSettings, saveSettings } from '../core/settings.js';
+import { parseDialogue } from '../core/text.js';
 import { speakHandy } from './hotkey.js';
 import { escapeHtml } from './form.js';
 import { ICON } from './icons.js';
@@ -85,7 +86,7 @@ function paneHtml() {
         </details>
         <div class="xvoice-row">
             <button class="menu_button" data-pl="direct" title="让 AI 把最近一条角色回复拆成台本，按角色分音色朗读">${ICON.director} AI 导演</button>
-            <button class="menu_button" data-pl="extract" title="提取最近一条角色回复的台词，只要角色名和对话">${ICON.extract} 提取对话</button>
+            <button class="menu_button" data-pl="extract" title="本地快速提取引号里的对白，不调用 AI">${ICON.extract} 提取对话</button>
             <span class="xvoice-status" data-pl-director></span>
         </div>
         <div class="xvoice-player-bar">
@@ -194,39 +195,37 @@ async function runDirector(pane) {
     }
 }
 
-async function runExtract(pane) {
+/** 本地提取：不调用 AI，瞬间出结果，只列出引号里的对白供核对。 */
+function runExtract(pane) {
     const resultBox = pane.querySelector('[data-pl-extract]');
     const btn = pane.querySelector('[data-pl="extract"]');
     if (btn.disabled) return;
-    btn.disabled = true;
     resultBox.style.display = 'block';
     resultBox.classList.remove('xvoice-error');
-    resultBox.textContent = '正在提取对话…';
-    try {
-        const lines = await extractDialogue();
-        if (!lines.length) {
-            resultBox.textContent = '没有提取到对话';
-            return;
-        }
-        const cast = castOf(lines);
-        const { mode, roleVoices, missing } = await assignVoices(cast);
-        const castText = cast.join('、');
-        let status = `${lines.length} 句 · ${castText}`;
-        if (missing.length) {
-            status += mode === 'manual'
-                ? `（${missing.join('、')} 还没配音色，用默认）`
-                : `（${missing.join('、')} 未挑到音色，用默认）`;
-        }
-        // 播放器列表会在 speakScript() 触发后显示同一批台词；提取框只保留摘要，
-        // 避免把相同内容渲染两遍（尤其在移动端会看起来像两个重叠的面板）。
-        resultBox.innerHTML = `<div class="xvoice-extract-status">${escapeHtml(status)} · 已载入下方播放器列表</div>`;
-        speakScript(lines);
-    } catch (e) {
-        resultBox.textContent = e.message;
-        resultBox.classList.add('xvoice-error');
-    } finally {
-        btn.disabled = false;
+
+    const lines = localDialogue();
+    if (!lines.length) {
+        resultBox.textContent = lastCharacterMessage()
+            ? '没找到引号里的对白。排版复杂的话，点「AI 导演」让模型来拆。'
+            : '当前聊天里还没有角色回复。';
+        return;
     }
+    const cast = [...new Set(lines.map((l) => l.speaker))];
+    resultBox.innerHTML = `<div class="xvoice-extract-status">
+            <span>本地提取 ${lines.length} 句 · ${escapeHtml(cast.join('、'))}</span>
+            <button type="button" class="menu_button" data-extract-play>朗读</button>
+        </div>
+        ${lines.map(extractLineHtml).join('')}`;
+}
+
+/** 用已保存的角色音色朗读提取结果；没配过的角色用默认音色。 */
+function playExtracted(pane) {
+    const lines = localDialogue();
+    if (!lines.length) return;
+    const status = pane.querySelector('[data-pl-director]');
+    status.classList.remove('xvoice-error');
+    status.textContent = `${lines.length} 句 · 用已配音色朗读`;
+    speakScript(lines);
 }
 
 const ACTIONS = {
@@ -237,6 +236,22 @@ const ACTIONS = {
     stop: () => player.stop(),
 };
 
+/** 本地提取：不调用 AI，瞬间出结果。 */
+function localDialogue() {
+    const raw = lastCharacterMessage();
+    if (!raw) return [];
+    // 显式关掉「只念引号」：否则正文已被抽成纯文本，拿不到引号和说话人
+    const { cleaned } = prepare(raw, { quotedOnly: false });
+    return parseDialogue(cleaned);
+}
+
+function extractLineHtml(line) {
+    return `<div class="xvoice-extract-line">
+        <span class="xvoice-extract-speaker">${escapeHtml(line.speaker)}</span>
+        <span class="xvoice-extract-text">${escapeHtml(line.text)}</span>
+    </div>`;
+}
+
 export function mountPlayerTab(pane) {
     pane.innerHTML = paneHtml();
     renderPicker(pane);
@@ -244,6 +259,8 @@ export function mountPlayerTab(pane) {
     syncVolume();
 
     pane.addEventListener('click', (event) => {
+        if (event.target.closest('[data-extract-play]')) return playExtracted(pane);
+
         const msgId = event.target.closest('[data-msg]')?.dataset.msg;
         if (msgId !== undefined) return speak(messageAt(msgId));
 

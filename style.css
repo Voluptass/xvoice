@@ -761,11 +761,20 @@
 }
 
 .xvoice-extract-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     font-size: 0.9em;
-    opacity: 0.8;
+    opacity: 0.85;
     padding-bottom: 8px;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+}
+
+.xvoice-extract-status .menu_button {
+    flex: none;
+    opacity: 1;
 }
 
 .xvoice-extract-line {
