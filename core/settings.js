@@ -1,5 +1,6 @@
 import { extension_settings } from '../../../../extensions.js';
 import { saveSettingsDebounced } from '../../../../../script.js';
+import { BUILTIN_ENTRIES } from '../regex/entry.js';
 import { EXT_NAME, Provider } from './constants.js';
 
 /** 单个 LLM 预设的默认值。maxTokens 给足，避免 JSON 输出被截断。 */
@@ -103,7 +104,27 @@ export function getSettings() {
     if (!extension_settings[EXT_NAME]) {
         extension_settings[EXT_NAME] = cloneValue(DEFAULTS);
     }
-    return fillDefaults(extension_settings[EXT_NAME], DEFAULTS);
+    const settings = fillDefaults(extension_settings[EXT_NAME], DEFAULTS);
+    migrate(settings);
+    return settings;
+}
+
+let migrated = false;
+
+/**
+ * 只跑一次的迁移。
+ * 给还没内置清洗规则的用户补上默认的思维链规则；
+ * 用户自己删掉后 defaultsSeeded 已置位，不会再补回来。
+ */
+function migrate(settings) {
+    if (migrated) return;
+    migrated = true;
+    if (settings.regex.defaultsSeeded !== undefined) return;
+    settings.regex.defaultsSeeded = true;
+    if (!settings.regex.entries.length) {
+        settings.regex.entries = cloneValue(BUILTIN_ENTRIES);
+    }
+    saveSettingsDebounced();
 }
 
 /** 保存并广播变更，UI 与助手改配置后界面能自动同步。 */

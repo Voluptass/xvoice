@@ -23,6 +23,25 @@ export function createEntry(overrides = {}) {
     return { ...DEFAULT_ENTRY, id: `rx_${Date.now()}_${counter}`, ...overrides };
 }
 
+/**
+ * 内置清洗规则：默认剥掉模型思维链。
+ * <think> 与 <thinking> 互不误伤（前者要求紧跟 `>`，后者紧跟 `ing>`）。
+ */
+export const BUILTIN_ENTRIES = [
+    createEntry({
+        id: 'rx_builtin_thinking',
+        name: '去 <thinking> 思维链',
+        find: '/<thinking>[\\s\\S]*?<\\/thinking>/gi',
+        replace: '',
+    }),
+    createEntry({
+        id: 'rx_builtin_think',
+        name: '去 <think> 思维链',
+        find: '/<think>[\\s\\S]*?<\\/think>/gi',
+        replace: '',
+    }),
+];
+
 /** 从 SillyTavern 正则脚本 JSON 导入；格式不符时返回 null。 */
 export function fromStFormat(json) {
     if (!json || typeof json.findRegex !== 'string') return null;

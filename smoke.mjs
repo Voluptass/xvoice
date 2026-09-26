@@ -1,7 +1,7 @@
 import { clean, split, parseDialogue } from './core/text.js';
 import { applyAll } from './regex/apply.js';
 import { inspect } from './regex/danger.js';
-import { fromStFormat, toStFormat, createEntry } from './regex/entry.js';
+import { fromStFormat, toStFormat, createEntry, BUILTIN_ENTRIES } from './regex/entry.js';
 import { parseCalls, stripCalls, formatResults } from './assistant/protocol.js';
 import { hexToBlob } from './tts/provider.js';
 
@@ -72,6 +72,21 @@ checkThat('坏规则被记录', result.errors.length === 1, JSON.stringify(resul
 
 const disabled = [createEntry({ name: '停用', find: '/./g', replace: '', enabled: false })];
 check('停用的规则被跳过', applyAll('abc', disabled).text, 'abc');
+
+console.log('\n[内置清洗规则]');
+checkThat('默认启用且启用替换为空',
+    BUILTIN_ENTRIES.every((e) => e.enabled && e.find && e.replace === ''), JSON.stringify(BUILTIN_ENTRIES.map((e) => e.name)));
+check('默认剥掉 <think> 思维链',
+    applyAll('a<think>盘算一下</think>b', BUILTIN_ENTRIES).text, 'ab');
+check('默认剥掉 <thinking> 思维链（含换行）',
+    applyAll('前<thinking>很长\n的内容</thinking>后', BUILTIN_ENTRIES).text, '前后');
+check('大小写不敏感', applyAll('<Think>x</Think>', BUILTIN_ENTRIES).text, '');
+const onlyThink = BUILTIN_ENTRIES.filter((e) => e.name.includes('<think>'));
+const onlyThinking = BUILTIN_ENTRIES.filter((e) => e.name.includes('<thinking>'));
+check('<think> 规则不误伤 <thinking>',
+    applyAll('<thinking>x</thinking>', onlyThink).text, '<thinking>x</thinking>');
+check('<thinking> 规则不误伤 <think>',
+    applyAll('<think>x</think>', onlyThinking).text, '<think>x</think>');
 
 console.log('\n[危险正则]');
 checkThat('嵌套量词被识别', !inspect('(a+)+').safe);
