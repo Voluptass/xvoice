@@ -101,10 +101,11 @@ function paneHtml() {
             <div class="xvoice-msg-list" data-msg-list></div>
         </details>
         <div class="xvoice-row">
-            <button class="menu_button" data-pl="direct" title="让 AI 把最近一条角色回复拆成台本，按角色分音色朗读">${ICON.director} AI 导演</button>
-            <button class="menu_button" data-pl="extract" title="本地快速提取引号里的对白，不调用 AI">${ICON.extract} 提取对话</button>
-            <span class="xvoice-status" data-pl-director></span>
+            <button class="menu_button" data-pl="direct" data-pl-tool title="让 AI 把最近一条角色回复拆成台本，按角色分音色朗读">${ICON.director} AI 导演</button>
+            <button class="menu_button" data-pl="extract" data-pl-tool title="本地快速提取引号里的对白，不调用 AI">${ICON.extract} 提取对话</button>
+            <button class="menu_button" data-pl="extract-ai" data-pl-tool title="用配置的模型提取对白，说话人判断更准">${ICON.extractAi} AI 提取对话</button>
         </div>
+        <div class="xvoice-status" data-pl-director></div>
         <div class="xvoice-player-bar">
             <button class="menu_button" data-pl="prev" title="上一段" aria-label="上一段">${ICON.prev}</button>
             <button class="menu_button xvoice-play-btn" data-pl="toggle" title="播放 / 暂停" aria-label="播放">${ICON.play}</button>
@@ -166,8 +167,8 @@ function update(pane, snapshot) {
     const box = pane.querySelector('[data-pl-lines]');
     renderLines(box, chunks, index);
     if (index >= 0) scrollToActive(box);
-    // 导演和提取对话按钮不依赖已有分段，别跟着播放控件一起禁用
-    pane.querySelectorAll('[data-pl]:not([data-pl="direct"]):not([data-pl="extract"])').forEach((btn) => {
+    // 三个工具按钮（导演 / 提取 / AI 提取）不依赖已有分段，别跟着播放控件一起禁用
+    pane.querySelectorAll('[data-pl]:not([data-pl-tool])').forEach((btn) => {
         btn.disabled = !chunks.length;
     });
 }
@@ -219,15 +220,11 @@ function renderExtract(pane, lines, { source, low = false } = {}) {
     const box = pane.querySelector('[data-pl-extract]');
     const cast = [...new Set(lines.map((l) => l.speaker))];
     const warn = low
-        ? '<div class="xvoice-extract-warn">⚠ 这段排版比较复杂，本地识别可能不准，建议点「AI 提取」。</div>'
+        ? '<div class="xvoice-extract-warn">⚠ 这段排版比较复杂，本地识别可能不准，建议点上面「AI 提取对话」。</div>'
         : '';
     box.innerHTML = `<div class="xvoice-extract-status">
             <span>${escapeHtml(source)}提取 ${lines.length} 句 · ${escapeHtml(cast.join('、'))}</span>
-            <span class="xvoice-extract-actions">
-                <button type="button" class="menu_button" data-extract-ai
-                    title="用配置的模型重新提取，说话人更准">AI 提取</button>
-                <button type="button" class="menu_button" data-extract-play>朗读</button>
-            </span>
+            <button type="button" class="menu_button" data-extract-play>朗读</button>
         </div>
         ${warn}
         ${lines.map(extractLineHtml).join('')}`;
@@ -251,12 +248,15 @@ function runExtract(pane) {
     renderExtract(pane, lines, { source: '本地', low: dialogueConfidence(lines) < 0.5 });
 }
 
-/** AI 提取：交给配置的模型判断说话人，复杂排版比本地准。 */
+/** AI 提取对话：交给配置的模型判断说话人，复杂排版比本地准。 */
 async function runExtractAi(pane) {
     const box = pane.querySelector('[data-pl-extract]');
-    const btn = box.querySelector('[data-extract-ai]');
-    if (btn) { btn.disabled = true; btn.textContent = '提取中…'; }
+    const btn = pane.querySelector('[data-pl="extract-ai"]');
+    if (btn?.disabled) return;
+    if (btn) btn.disabled = true;
+    box.style.display = 'block';
     box.classList.remove('xvoice-error');
+    box.textContent = 'AI 正在提取对话…';
     try {
         const lines = await extractDialogue();
         if (!lines.length) {
@@ -269,6 +269,8 @@ async function runExtractAi(pane) {
     } catch (e) {
         box.textContent = `AI 提取失败：${e.message}`;
         box.classList.add('xvoice-error');
+    } finally {
+        if (btn) btn.disabled = false;
     }
 }
 
@@ -328,7 +330,6 @@ export function mountPlayerTab(pane, ctx) {
 
     pane.addEventListener('click', (event) => {
         if (event.target.closest('[data-extract-play]')) return playExtracted(pane);
-        if (event.target.closest('[data-extract-ai]')) return runExtractAi(pane);
 
         const msgId = event.target.closest('[data-msg]')?.dataset.msg;
         if (msgId !== undefined) return speak(messageAt(msgId));
@@ -336,6 +337,7 @@ export function mountPlayerTab(pane, ctx) {
         const act = event.target.closest('[data-pl]')?.dataset.pl;
         if (act === 'direct') return runDirector(pane);
         if (act === 'extract') return runExtract(pane);
+        if (act === 'extract-ai') return runExtractAi(pane);
         if (act) return ACTIONS[act]?.();
 
         const line = event.target.closest('.xvoice-line')?.dataset.line;

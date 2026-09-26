@@ -788,12 +788,6 @@
     opacity: 1;
 }
 
-.xvoice-extract-actions {
-    display: inline-flex;
-    gap: 6px;
-    flex: none;
-}
-
 .xvoice-extract-warn {
     font-size: 0.85em;
     line-height: 1.4;

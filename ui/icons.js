@@ -23,4 +23,5 @@ export const ICON = {
     trash: icon('trash-can'),
     director: icon('clapperboard'),
     extract: icon('quote-left'),
+    extractAi: icon('robot'),
 };
