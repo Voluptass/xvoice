@@ -6,7 +6,10 @@
     "js": "index.js",
     "css": "style.css",
     "author": "",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "homePage": "",
-    "update_notes": "0.1.0 初始骨架：统一 LLM 通道、MiniMax / Azure TTS、正则清洗管线、AI 配置助手"
+    "hooks": {
+        "update": "onExtensionUpdate"
+    },
+    "update_notes": "0.2.0：面板交互与可访问性全面优化；「提取对话」改为本地即时提取；用户发言默认不列入朗读范围（可在播放器里开启）；更新后自动刷新页面"
 }
