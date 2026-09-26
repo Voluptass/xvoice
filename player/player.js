@@ -146,7 +146,12 @@ export class Player {
             if (gen !== this.#generation) return;
             this.#prefetch(i + 1);
             this.#set(State.PLAYING, i);
-            if (!await this.#playBlob(blob, gen)) return;
+            if (!await this.#playBlob(blob, gen)) {
+                // 被打断（换段/停止）时 generation 已变，交给新流程处理；
+                // 否则就是播放真的失败了，回到停止态并报错，别卡在「播放中」。
+                if (gen === this.#generation) this.#fail(new Error('音频播放失败，请检查音色配置或网络。'));
+                return;
+            }
         }
         if (gen === this.#generation) this.#set(State.IDLE, -1);
     }

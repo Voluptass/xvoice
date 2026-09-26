@@ -4,6 +4,7 @@ import { chat } from '../assistant/agent.js';
 import { stripCalls } from '../assistant/protocol.js';
 import { renderFields, bindFields, escapeHtml } from './form.js';
 import { createFloatingPanel } from './floating.js';
+import { icon } from './icons.js';
 
 let modelPicker = null;
 let availableModels = [];
@@ -41,9 +42,15 @@ function showCall(el, { id, status, result }) {
     else box.insertAdjacentHTML('beforeend', `<span class="xvoice-call" data-call="${key}">${escapeHtml(label)}</span>`);
 }
 
+function setBusy(pane, on) {
+    const send = pane.querySelector('[data-as="send"]');
+    if (send) send.disabled = on;
+}
+
 async function send(pane, text) {
     if (busy || !text.trim()) return;
     busy = true;
+    setBusy(pane, true);
     bubble(pane, 'user', text);
     const el = bubble(pane, 'assistant', '思考中…');
     const body = el.querySelector('.xvoice-msg-body');
@@ -65,6 +72,7 @@ async function send(pane, text) {
         body.classList.add('xvoice-error');
     } finally {
         busy = false;
+        setBusy(pane, false);
     }
 }
 
@@ -153,7 +161,8 @@ function paneHtml() {
         </details>
         <div class="xvoice-chat" data-xv-chat></div>
         <div class="xvoice-row">
-            <button class="menu_button" data-as="diagnose">一键自检</button>
+            <button class="menu_button" data-as="diagnose">${icon('stethoscope')} 一键自检</button>
+            <button class="menu_button" data-as="clear">${icon('broom')} 清空对话</button>
         </div>
         <div class="xvoice-input-row">
             <textarea class="text_pole" data-xv-input data-autofocus rows="2" placeholder="描述你遇到的问题，例如：朗读没有声音 / 帮我配个去掉状态栏的正则"></textarea>
@@ -172,24 +181,38 @@ export function mountAssistantTab(pane) {
     bubble(pane, 'assistant', WELCOME);
 
     const input = pane.querySelector('[data-xv-input]');
+
+    const submit = async () => {
+        const text = input.value;
+        input.value = '';
+        input.style.height = '';
+        await send(pane, text);
+    };
+
+    // 输入框随内容长高，最多到 8 行左右，再多就内部滚动
+    input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
+    });
+
     pane.addEventListener('click', async (event) => {
         const act = event.target.closest('[data-as]')?.dataset.as;
         if (act === 'test') return runTest(pane);
         if (act === 'models') return loadModels(pane);
         if (act === 'pick-model') return openModelPicker(pane);
         if (act === 'diagnose') return send(pane, '帮我做一次完整自检，说明当前配置有什么问题、怎么修。');
-        if (act === 'send') {
-            const text = input.value;
-            input.value = '';
-            await send(pane, text);
+        if (act === 'clear') {
+            history.length = 0;
+            pane.querySelector('[data-xv-chat]').innerHTML = '';
+            bubble(pane, 'assistant', WELCOME);
+            return;
         }
+        if (act === 'send') return submit();
     });
 
     input.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
         event.preventDefault();
-        const text = input.value;
-        input.value = '';
-        send(pane, text);
+        submit();
     });
 }

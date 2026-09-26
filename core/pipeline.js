@@ -3,6 +3,7 @@ import { clean, split } from './text.js';
 import { synthesize } from '../tts/index.js';
 import { Player } from '../player/player.js';
 import { getSettings } from './settings.js';
+import { Provider } from './constants.js';
 
 const MAX_INFLIGHT = 2;
 
@@ -112,13 +113,20 @@ export function speakScript(lines) {
     player.play(0);
 }
 
+/**
+ * 把「音色 id」翻译成当前供应商认识的覆盖参数。
+ * 空值返回 undefined，表示沿用默认音色。
+ */
+export function voiceOverride(voiceId) {
+    if (!voiceId) return undefined;
+    const { tts } = getSettings();
+    return tts.provider === Provider.MINIMAX ? { voiceId } : { voice: voiceId };
+}
+
 /** 按角色查它的音色覆盖。查不到就留给当前供应商默认音色。 */
 export function voiceFor(speaker) {
     const { director } = getSettings();
-    const override = director?.roleVoices?.[speaker];
-    if (!override) return undefined;
-    const { tts } = getSettings();
-    return tts.provider === 'minimax' ? { voiceId: override } : { voice: override };
+    return voiceOverride(director?.roleVoices?.[speaker]);
 }
 
 export function stop() {

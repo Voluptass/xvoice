@@ -1,47 +1,16 @@
-.xvoice-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+/* xvoice 面板样式
+ *
+ * 全程使用酒馆主题变量（--SmartTheme*、--white*、--black*、--golden），
+ * 跟着用户的明暗主题走，不写死颜色。
+ */
+
+.xvoice-float,
+.xvoice-selection-popup {
+    --xv-accent: var(--golden, #d8b25f);
+    --xv-radius: 6px;
 }
 
-.xvoice-tabs {
-    display: flex;
-    gap: 2px;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
-    padding-bottom: 4px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-}
-
-.xvoice-tab {
-    flex: 1;
-    min-width: 3.5em;
-    padding: 6px 4px;
-    background: none;
-    border: none;
-    border-radius: 4px 4px 0 0;
-    color: var(--SmartThemeBodyColor);
-    cursor: pointer;
-    font-size: 0.9em;
-    white-space: nowrap;
-}
-
-.xvoice-tab:hover {
-    background: var(--white20a);
-}
-
-.xvoice-tab.active {
-    background: var(--white30a);
-    font-weight: bold;
-}
-
-.xvoice-open-btn {
-    width: 100%;
-    padding: 8px;
-    font-weight: bold;
-    margin-bottom: 6px;
-}
-
+/* ── 通用控件 ──────────────────────────────────── */
 .xvoice-panel {
     display: flex;
     flex-direction: column;
@@ -51,10 +20,17 @@
 .xvoice-field {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     margin-bottom: 8px;
 }
 
+.xvoice-label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.xvoice-label-text,
 .xvoice-field > label {
     font-size: 0.9em;
     opacity: 0.85;
@@ -63,7 +39,16 @@
 .xvoice-hint {
     font-size: 0.8em;
     opacity: 0.6;
-    line-height: 1.3;
+    line-height: 1.35;
+}
+
+.xvoice-section {
+    margin: 6px 0 2px;
+    font-size: 0.82em;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    opacity: 0.6;
+    text-transform: uppercase;
 }
 
 .xvoice-error {
@@ -95,32 +80,199 @@
     opacity: 0.8;
 }
 
+/* 键盘焦点始终可见（WCAG 2.2），鼠标点击不显示外圈 */
+.xvoice-float :is(button, input, select, textarea, [tabindex], [role="button"]):focus-visible,
+.xvoice-selection-popup:focus-visible {
+    outline: 2px solid var(--xv-accent);
+    outline-offset: 2px;
+}
+
+.xvoice-icon-btn,
+.xvoice-del {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    min-width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.12s ease, opacity 0.12s ease;
+}
+
+.xvoice-icon-btn:hover:not(:disabled) {
+    background: var(--white20a);
+}
+
+.xvoice-icon-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+.xvoice-del:hover {
+    background: var(--white20a);
+    color: var(--warning, #e57373);
+}
+
+/* ── 页签 ──────────────────────────────────────── */
+.xvoice-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.xvoice-tab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 3.5em;
+    padding: 7px 8px;
+    background: none;
+    border: none;
+    border-radius: var(--xv-radius);
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    font-size: 0.9em;
+    white-space: nowrap;
+    opacity: 0.7;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.xvoice-tab i {
+    font-size: 0.95em;
+}
+
+.xvoice-tab:hover {
+    background: var(--white20a);
+    opacity: 1;
+}
+
+.xvoice-tab.active {
+    background: var(--white30a);
+    font-weight: 600;
+    opacity: 1;
+}
+
+.xvoice-open-btn {
+    width: 100%;
+    padding: 8px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
 /* ── 音色列表 ── */
+.xvoice-voice-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.xvoice-voice-search {
+    width: 100%;
+    box-sizing: border-box;
+}
+
 .xvoice-voice-list {
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
     border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 4px;
+    border-radius: var(--xv-radius);
     padding: 4px;
 }
 
 .xvoice-voice {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     gap: 8px;
-    padding: 4px 6px;
-    border-radius: 3px;
-    cursor: pointer;
+    padding: 5px 6px;
+    border-radius: 4px;
     font-size: 0.85em;
+    transition: background-color 0.12s ease;
 }
 
-.xvoice-voice:hover {
+.xvoice-voice:hover,
+.xvoice-voice-selected {
     background: var(--white20a);
 }
 
-.xvoice-voice code {
-    opacity: 0.6;
+.xvoice-voice-pick {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.xvoice-voice-name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.xvoice-voice-name i {
+    color: var(--xv-accent);
+    font-size: 0.85em;
+}
+
+.xvoice-voice-id {
+    flex: none;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.55;
     font-size: 0.9em;
+}
+
+.xvoice-voice-play,
+.xvoice-cast-play {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 50%;
+    background: var(--black30a);
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.72em;
+    transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.xvoice-voice-play:hover,
+.xvoice-cast-play:hover {
+    background: var(--white20a);
+}
+
+.xvoice-voice-play.xvoice-playing,
+.xvoice-cast-play.xvoice-playing {
+    color: var(--xv-accent);
+    border-color: var(--xv-accent);
 }
 
 /* ── 角色配音 ── */
@@ -151,27 +303,28 @@
 /* ── 正则规则 ── */
 .xvoice-rule {
     border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 4px;
+    border-radius: var(--xv-radius);
     padding: 6px;
     margin-bottom: 6px;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    transition: border-color 0.12s ease;
+}
+
+.xvoice-rule:focus-within {
+    border-color: var(--xv-accent);
 }
 
 .xvoice-rule-head {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
 .xvoice-rule-head input[data-f="name"] {
     flex: 1;
-}
-
-.xvoice-del {
-    padding: 2px 8px;
-    min-width: auto;
+    min-width: 0;
 }
 
 .xvoice-steps {
@@ -185,7 +338,7 @@
     display: flex;
     justify-content: space-between;
     font-size: 0.82em;
-    padding: 2px 6px;
+    padding: 3px 6px;
     border-radius: 3px;
     background: var(--black30a);
 }
@@ -202,7 +355,7 @@
     max-height: 320px;
     overflow-y: auto;
     border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
-    border-radius: 4px;
+    border-radius: var(--xv-radius);
     padding: 8px;
     display: flex;
     flex-direction: column;
@@ -256,7 +409,9 @@
 
 .xvoice-input-row textarea {
     flex: 1;
-    resize: vertical;
+    resize: none;
+    max-height: 160px;
+    overflow-y: auto;
 }
 
 /* ── 选中朗读浮标 ── */
@@ -264,11 +419,15 @@
     position: fixed;
     transform: translateX(-50%);
     z-index: 10000;
-    padding: 4px 12px;
-    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
     background: var(--SmartThemeBlurTintColor, #2a2a2a);
     border: 1px solid var(--SmartThemeBorderColor);
     color: var(--SmartThemeBodyColor);
+    font-family: inherit;
     font-size: 0.85em;
     cursor: pointer;
     box-shadow: 0 2px 8px rgb(0 0 0 / 40%);
@@ -276,7 +435,7 @@
 }
 
 .xvoice-selection-popup:hover {
-    filter: brightness(1.2);
+    filter: brightness(1.15);
 }
 
 /* ── 消息按钮 ── */
@@ -338,19 +497,27 @@
 .xvoice-float-title {
     font-weight: bold;
     font-size: 0.95em;
+    letter-spacing: 0.02em;
 }
 
 .xvoice-float-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
     background: none;
     border: none;
+    border-radius: 4px;
     color: inherit;
     cursor: pointer;
-    font-size: 1.1em;
+    font-size: 1em;
     opacity: 0.7;
-    padding: 0 4px;
+    transition: background-color 0.12s ease, opacity 0.12s ease;
 }
 
 .xvoice-float-close:hover {
+    background: var(--white20a);
     opacity: 1;
 }
 
@@ -358,6 +525,22 @@
     flex: 1;
     overflow-y: auto;
     padding: 12px;
+}
+
+/* 右下角拖拽提示：真正改尺寸的是浏览器原生的 resize 手柄 */
+.xvoice-resize-grip {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    opacity: 0.25;
+    background:
+        repeating-linear-gradient(135deg,
+            currentColor 0, currentColor 1px,
+            transparent 1px, transparent 4px);
+    mask-image: linear-gradient(135deg, transparent 40%, #000 40%);
 }
 
 /* 浮窗里空间充裕，对话区可以给得更高 */
@@ -383,19 +566,27 @@
     max-height: 150px;
     overflow-y: auto;
     border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
-    border-radius: 4px;
+    border-radius: var(--xv-radius);
     padding: 4px;
     margin-top: 6px;
 }
 
 .xvoice-pick {
     display: flex;
+    width: 100%;
+    box-sizing: border-box;
     gap: 8px;
     align-items: baseline;
     padding: 4px 6px;
+    border: none;
     border-radius: 4px;
-    cursor: pointer;
+    background: none;
+    color: inherit;
+    font: inherit;
     font-size: 0.85em;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
 }
 
 .xvoice-pick:hover {
@@ -445,15 +636,54 @@
 }
 
 .xvoice-play-btn {
-    font-size: 1.2em !important;
+    font-size: 1.1em !important;
     min-width: 56px !important;
 }
 
+.xvoice-progress {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--black30a, rgb(0 0 0 / 25%));
+    overflow: hidden;
+    margin: 2px 0 8px;
+}
+
+.xvoice-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--xv-accent);
+    transition: width 0.2s ease;
+}
+
+.xvoice-player-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
 .xvoice-player-status {
-    text-align: center;
     font-size: 0.85em;
     opacity: 0.75;
-    margin-bottom: 8px;
+}
+
+.xvoice-vol {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.8;
+}
+
+.xvoice-vol input[type="range"] {
+    width: 90px;
+    accent-color: var(--xv-accent);
+}
+
+.xvoice-vol i {
+    font-size: 0.78em;
+    opacity: 0.7;
 }
 
 .xvoice-lines {
@@ -461,18 +691,27 @@
     max-height: 32vh;
     overflow-y: auto;
     border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
-    border-radius: 4px;
+    border-radius: var(--xv-radius);
     padding: 4px;
 }
 
 .xvoice-line {
     display: flex;
+    width: 100%;
+    box-sizing: border-box;
     gap: 8px;
     padding: 5px 7px;
+    border: none;
+    border-left: 2px solid transparent;
     border-radius: 4px;
-    cursor: pointer;
+    background: none;
+    color: inherit;
+    font: inherit;
     font-size: 0.88em;
     line-height: 1.5;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
 }
 
 .xvoice-line:hover {
@@ -482,6 +721,7 @@
 .xvoice-line-active {
     background: var(--white30a, rgb(255 255 255 / 14%));
     color: var(--golden, #d8b25f);
+    border-left-color: var(--golden, #d8b25f);
 }
 
 .xvoice-line-no {
@@ -514,7 +754,7 @@
     max-height: 300px;
     overflow-y: auto;
     border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
-    border-radius: 4px;
+    border-radius: var(--xv-radius);
     padding: 8px;
     margin-top: 10px;
     font-size: 0.88em;
@@ -602,6 +842,10 @@
     to { transform: translateY(0); }
 }
 
+.xvoice-float--mobile .xvoice-resize-grip {
+    display: none;
+}
+
 .xvoice-float--mobile .xvoice-float-bar {
     cursor: default;
     justify-content: center;
@@ -625,8 +869,8 @@
 
 .xvoice-float--mobile .xvoice-float-close {
     position: absolute;
-    right: 12px;
-    top: 8px;
+    right: 8px;
+    top: 6px;
 }
 
 /* 页签横滚，手指不用挤 */
@@ -664,6 +908,15 @@
     align-items: center;
 }
 
+.xvoice-float--mobile .xvoice-icon-btn,
+.xvoice-float--mobile .xvoice-del,
+.xvoice-float--mobile .xvoice-voice-play,
+.xvoice-float--mobile .xvoice-cast-play,
+.xvoice-float--mobile .xvoice-float-close {
+    width: 44px;
+    height: 44px;
+}
+
 .xvoice-float--mobile .xvoice-player-bar .menu_button {
     min-width: 48px;
     min-height: 48px;
@@ -672,7 +925,7 @@
 
 .xvoice-float--mobile .xvoice-play-btn {
     min-width: 60px !important;
-    font-size: 1.4em !important;
+    font-size: 1.3em !important;
 }
 
 /* 输入框在底部，虚拟键盘弹出时自动滚上来 */
@@ -712,10 +965,27 @@
     text-align: left;
     cursor: pointer;
     word-break: break-all;
+    transition: background-color 0.12s ease;
 }
 
 .xvoice-model-option:hover,
 .xvoice-model-option:focus {
     background: var(--white20a, rgb(255 255 255 / 8%));
     outline: none;
+}
+
+/* ── 尊重用户的减少动效偏好 ── */
+@media (prefers-reduced-motion: reduce) {
+    .xvoice-float--mobile {
+        animation: none;
+    }
+
+    .xvoice-tab,
+    .xvoice-voice,
+    .xvoice-pick,
+    .xvoice-line,
+    .xvoice-progress-fill,
+    .xvoice-model-option {
+        transition: none;
+    }
 }

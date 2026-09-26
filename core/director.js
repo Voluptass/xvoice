@@ -57,7 +57,8 @@ function parseJson(raw) {
     }
 }
 
-const NON_DIALOGUE_SPEAKER = /^(系统|system|assistant|user|作者|注释|提示|状态|思考|thought|narration|旁白)$/i;
+// 只拦截模型把系统/元信息当成说话人的情况；旁白是合法角色，不能列进来。
+const NON_DIALOGUE_SPEAKER = /^(系统|system|assistant|user|作者|注释|提示|状态|思考|thought)$/i;
 const ACTION_ONLY = /^[（(【\[［].*[）)】\]］]$/s;
 const LINE_TYPES = new Set(['dialogue', 'narration', 'thought', 'action']);
 const SPEAKER_TYPE_ALIASES = new Map([['旁白', 'narration'], ['内心', 'thought'], ['心理', 'thought'], ['动作', 'action']]);

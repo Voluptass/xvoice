@@ -1,10 +1,12 @@
 import { eventSource, event_types } from '../../../../../script.js';
-import { player, onPipelineEvent, speak, speakScript, prepare } from '../core/pipeline.js';
+import { player, onPipelineEvent, speak, speakScript, prepare, voiceFor } from '../core/pipeline.js';
 import { direct, extractDialogue, castOf, assignVoices } from '../core/director.js';
 import { State } from '../player/player.js';
 import { recentMessages, messageAt } from '../core/chat-source.js';
+import { getSettings, saveSettings } from '../core/settings.js';
 import { speakHandy } from './hotkey.js';
 import { escapeHtml } from './form.js';
+import { ICON } from './icons.js';
 
 const EMPTY_HINT = '还没有朗读内容。<br>在上面挑一条消息，或按 Alt+R 念最新一条。';
 const PICK_LIMIT = 12;
@@ -20,21 +22,35 @@ function statusText({ state, index, chunks }) {
 }
 
 function playIcon(state) {
-    if (state === State.PLAYING) return '⏸';
-    if (state === State.LOADING) return '…';
-    return '▶';
+    if (state === State.PLAYING) return ICON.pause;
+    if (state === State.LOADING) return ICON.spinner;
+    return ICON.play;
+}
+
+function playLabel(state) {
+    if (state === State.PLAYING) return '暂停';
+    if (state === State.PAUSED) return '继续';
+    return '播放';
+}
+
+/** 这一段的说话人用了哪个音色，鼠标悬停就能看到，方便排查配错音色。 */
+function voiceTag(speaker) {
+    if (!speaker) return '';
+    const override = voiceFor(speaker);
+    const voiceId = override ? (override.voiceId || override.voice || '') : '';
+    return ` title="角色：${escapeHtml(speaker)} · 音色：${escapeHtml(voiceId || '默认')}"`;
 }
 
 function lineHtml(chunk, i, current) {
     const cls = i === current ? 'xvoice-line xvoice-line-active' : 'xvoice-line';
     const who = chunk.speaker
-        ? `<span class="xvoice-line-who">${escapeHtml(chunk.speaker)}</span>`
+        ? `<span class="xvoice-line-who"${voiceTag(chunk.speaker)}>${escapeHtml(chunk.speaker)}</span>`
         : '';
-    return `<div class="${cls}" data-line="${i}">
+    return `<button type="button" class="${cls}" data-line="${i}" aria-current="${i === current}">
         <span class="xvoice-line-no">${i + 1}</span>
         ${who}
         <span class="xvoice-line-text">${escapeHtml(chunk.text)}</span>
-    </div>`;
+    </button>`;
 }
 
 /** 预览直接走完整管线，看到的就是会念出来的内容，顺便暴露被正则清空的消息。 */
@@ -47,10 +63,10 @@ function previewOf(text) {
 
 function pickHtml(msg) {
     const cls = msg.isUser ? 'xvoice-pick xvoice-pick-user' : 'xvoice-pick';
-    return `<div class="${cls}" data-msg="${msg.id}" title="点击朗读这条">
+    return `<button type="button" class="${cls}" data-msg="${msg.id}" title="点击朗读这条">
         <span class="xvoice-pick-name">${escapeHtml(msg.name)}</span>
         <span class="xvoice-pick-text">${escapeHtml(previewOf(msg.text))}</span>
-    </div>`;
+    </button>`;
 }
 
 function renderPicker(pane) {
@@ -68,18 +84,29 @@ function paneHtml() {
             <div class="xvoice-msg-list" data-msg-list></div>
         </details>
         <div class="xvoice-row">
-            <button class="menu_button" data-pl="direct" title="让 AI 把最近一条角色回复拆成台本，按角色分音色朗读">🎬 AI 导演</button>
-            <button class="menu_button" data-pl="extract" title="提取最近一条角色回复的台词，只要角色名和对话">📝 提取对话</button>
+            <button class="menu_button" data-pl="direct" title="让 AI 把最近一条角色回复拆成台本，按角色分音色朗读">${ICON.director} AI 导演</button>
+            <button class="menu_button" data-pl="extract" title="提取最近一条角色回复的台词，只要角色名和对话">${ICON.extract} 提取对话</button>
             <span class="xvoice-status" data-pl-director></span>
         </div>
         <div class="xvoice-player-bar">
-            <button class="menu_button" data-pl="prev" title="上一段">⏮</button>
-            <button class="menu_button xvoice-play-btn" data-pl="toggle" title="播放 / 暂停">▶</button>
-            <button class="menu_button" data-pl="next" title="下一段">⏭</button>
-            <button class="menu_button" data-pl="restart" title="从头播放">↺</button>
-            <button class="menu_button" data-pl="stop" title="停止">■</button>
+            <button class="menu_button" data-pl="prev" title="上一段" aria-label="上一段">${ICON.prev}</button>
+            <button class="menu_button xvoice-play-btn" data-pl="toggle" title="播放 / 暂停" aria-label="播放">${ICON.play}</button>
+            <button class="menu_button" data-pl="next" title="下一段" aria-label="下一段">${ICON.next}</button>
+            <button class="menu_button" data-pl="restart" title="从头播放" aria-label="从头播放">${ICON.restart}</button>
+            <button class="menu_button" data-pl="stop" title="停止" aria-label="停止">${ICON.stop}</button>
         </div>
-        <div class="xvoice-player-status" data-pl-status>未在播放</div>
+        <div class="xvoice-progress" data-pl-progress role="progressbar"
+            aria-label="播放进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="xvoice-progress-fill" data-pl-progress-fill></div>
+        </div>
+        <div class="xvoice-player-meta">
+            <span class="xvoice-player-status" data-pl-status>未在播放</span>
+            <label class="xvoice-vol" title="音量">
+                <i class="fa-solid fa-volume-low" aria-hidden="true"></i>
+                <input type="range" min="0" max="1" step="0.05" data-pl-vol aria-label="音量">
+                <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+            </label>
+        </div>
         <div class="xvoice-lines" data-pl-lines></div>
         <div class="xvoice-extract-result" data-pl-extract style="display:none"></div>`;
 }
@@ -95,7 +122,9 @@ function renderLines(box, chunks, index) {
         return;
     }
     box.querySelectorAll('.xvoice-line').forEach((el, i) => {
-        el.classList.toggle('xvoice-line-active', i === index);
+        const on = i === index;
+        el.classList.toggle('xvoice-line-active', on);
+        el.setAttribute('aria-current', String(on));
     });
 }
 
@@ -106,8 +135,17 @@ function scrollToActive(box) {
 
 function update(pane, snapshot) {
     const { state, index, chunks } = snapshot;
+    const total = chunks.length;
     pane.querySelector('[data-pl-status]').textContent = statusText(snapshot);
-    pane.querySelector('.xvoice-play-btn').textContent = playIcon(state);
+
+    const playBtn = pane.querySelector('.xvoice-play-btn');
+    playBtn.innerHTML = playIcon(state);
+    playBtn.setAttribute('aria-label', playLabel(state));
+
+    const percent = total && index >= 0 ? Math.round(((index + 1) / total) * 100) : 0;
+    pane.querySelector('[data-pl-progress-fill]').style.width = `${percent}%`;
+    pane.querySelector('[data-pl-progress]').setAttribute('aria-valuenow', String(percent));
+
     const box = pane.querySelector('[data-pl-lines]');
     renderLines(box, chunks, index);
     if (index >= 0) scrollToActive(box);
@@ -115,6 +153,18 @@ function update(pane, snapshot) {
     pane.querySelectorAll('[data-pl]:not([data-pl="direct"]):not([data-pl="extract"])').forEach((btn) => {
         btn.disabled = !chunks.length;
     });
+}
+
+/** 音量即时生效，松手才落盘，避免拖动时反复写配置。 */
+function bindVolume(pane) {
+    const slider = pane.querySelector('[data-pl-vol]');
+    slider.addEventListener('input', () => {
+        const value = Number(slider.value);
+        getSettings().playback.volume = value;
+        player.setVolume(value);
+    });
+    slider.addEventListener('change', () => saveSettings());
+    return () => { slider.value = String(getSettings().playback.volume ?? 1); };
 }
 
 /** 跑一遍导演流程，把结果写进播放器并直接开演。 */
@@ -190,6 +240,8 @@ const ACTIONS = {
 export function mountPlayerTab(pane) {
     pane.innerHTML = paneHtml();
     renderPicker(pane);
+    const syncVolume = bindVolume(pane);
+    syncVolume();
 
     pane.addEventListener('click', (event) => {
         const msgId = event.target.closest('[data-msg]')?.dataset.msg;
@@ -207,6 +259,8 @@ export function mountPlayerTab(pane) {
     onPipelineEvent((ev, payload) => {
         if (ev === 'player') update(pane, payload);
     });
+
+    document.addEventListener('xvoice:settings-changed', syncVolume);
 
     // 新消息进来时刷新点播列表，否则列表永远停在打开浮窗那一刻
     [event_types.MESSAGE_RENDERED, event_types.CHARACTER_MESSAGE_RENDERED, event_types.CHAT_CHANGED]

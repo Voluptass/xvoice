@@ -2,31 +2,39 @@ import { getSettings, saveSettings } from '../core/settings.js';
 import { renderFields, bindFields } from './form.js';
 import { speak } from '../core/pipeline.js';
 import { speakHandy } from './hotkey.js';
+import { icon } from './icons.js';
 
-const READ_FIELDS = [
+const BEHAVIOR_FIELDS = [
     { key: 'autoRead', label: '自动朗读角色新消息', type: 'checkbox' },
     { key: 'volume', label: '音量', type: 'number', min: 0, max: 1, step: 0.1 },
     { key: 'chunkSize', label: '分段长度', type: 'number', min: 50, max: 2000, hint: '越小越快出声，越大越连贯' },
+];
+
+const TEXT_FIELDS = [
     { key: 'quotedOnly', label: '只朗读引号内的对白', type: 'checkbox' },
     { key: 'stripEmoji', label: '过滤表情符号', type: 'checkbox' },
     { key: 'stripUrl', label: '过滤网址', type: 'checkbox' },
 ];
 
 function paneHtml() {
-    return `${renderFields(READ_FIELDS)}
+    return `<h4 class="xvoice-section">朗读行为</h4>
+        ${renderFields(BEHAVIOR_FIELDS)}
         <div class="xvoice-row">
-            <button class="menu_button" data-act="player">去播放器</button>
-            <button class="menu_button" data-act="last">朗读最新消息</button>
-            <button class="menu_button" data-act="preview">试听</button>
+            <button class="menu_button" data-act="player">${icon('headphones')} 去播放器</button>
+            <button class="menu_button" data-act="last">${icon('play')} 朗读最新消息</button>
+            <button class="menu_button" data-act="preview">${icon('volume-high')} 试听</button>
         </div>
+        <h4 class="xvoice-section">文本处理</h4>
+        ${renderFields(TEXT_FIELDS)}
         <small class="xvoice-hint">快捷键 Alt+R：有选中就念选中的，没有就念最新一条；播放中按则暂停/继续。
         也可以点消息右上角的喇叭，或用 /xvoice 文本 命令。</small>`;
 }
 
 export function mountReadTab(pane, ctx) {
     pane.innerHTML = paneHtml();
-    const refresh = bindFields(pane, READ_FIELDS, () => getSettings().playback, saveSettings);
-    document.addEventListener('xvoice:settings-changed', refresh);
+    const refresh = bindFields(pane, BEHAVIOR_FIELDS, () => getSettings().playback, saveSettings);
+    const refreshText = bindFields(pane, TEXT_FIELDS, () => getSettings().playback, saveSettings);
+    document.addEventListener('xvoice:settings-changed', () => { refresh(); refreshText(); });
 
     pane.addEventListener('click', (event) => {
         const act = event.target.closest('[data-act]')?.dataset.act;

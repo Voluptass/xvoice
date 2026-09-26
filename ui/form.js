@@ -48,7 +48,8 @@ export function renderFields(specs) {
         const hint = spec.hint ? `<small class="xvoice-hint">${escapeHtml(spec.hint)}</small>` : '';
         const row = spec.type === 'checkbox'
             ? `<label class="checkbox_label">${inputHtml(spec)}<span>${escapeHtml(spec.label)}</span></label>`
-            : `<label>${escapeHtml(spec.label)}</label>${inputHtml(spec)}`;
+            // 用 label 包住控件：点标题文字也能聚焦输入框，且读屏能朗读出字段名
+            : `<label class="xvoice-label"><span class="xvoice-label-text">${escapeHtml(spec.label)}</span>${inputHtml(spec)}</label>`;
         return `<div class="xvoice-field" data-xv-field="${spec.key}">${row}${hint}</div>`;
     }).join('');
 }

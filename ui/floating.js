@@ -8,6 +8,8 @@
  * 浮窗模式：和之前一样，可拖拽、位置持久化。
  */
 
+import { icon } from './icons.js';
+
 const POSITION_KEY = 'xvoice-panel-pos';
 const MOBILE_BP = 600;
 const SHEET_MAX = 0.88;
@@ -133,14 +135,27 @@ function createBackdrop(onTap) {
 function buildShell(title) {
     const root = document.createElement('div');
     root.className = 'xvoice-float';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-label', title);
+    root.tabIndex = -1;
     root.innerHTML = `
-        <div class="xvoice-float-bar">
+        <div class="xvoice-float-bar" title="拖动可移动窗口">
             <div class="xvoice-sheet-handle"></div>
             <span class="xvoice-float-title">${title}</span>
-            <button class="xvoice-float-close" title="关闭">✕</button>
+            <button class="xvoice-float-close" title="关闭" aria-label="关闭面板">${icon('xmark')}</button>
         </div>
-        <div class="xvoice-float-body"></div>`;
+        <div class="xvoice-float-body"></div>
+        <div class="xvoice-resize-grip" aria-hidden="true"></div>`;
     return root;
+}
+
+/** 打开时把焦点送进面板：优先当前可见页签里标记了 data-autofocus 的控件，否则落到当前页签。 */
+function focusFirst(body) {
+    const pane = body.querySelector('.xvoice-wpane:not([hidden])');
+    const target = pane?.querySelector('[data-autofocus]')
+        || body.querySelector('.xvoice-tab.active')
+        || body;
+    try { target.focus(); } catch { /* 忽略 */ }
 }
 
 // ── 公共接口 ────────────────────────────────────
@@ -155,6 +170,7 @@ export function createFloatingPanel({ title, onFirstOpen }) {
     const bar = root.querySelector('.xvoice-float-bar');
     const backdrop = createBackdrop(() => close());
     let mounted = false;
+    let lastFocused = null;
 
     Object.assign(root.style, loadPosition() || { left: '', top: '' });
     syncViewportVars(root);
@@ -168,9 +184,14 @@ export function createFloatingPanel({ title, onFirstOpen }) {
     }
 
     const close = () => {
+        const wasOpen = root.classList.contains('xvoice-float-open');
         root.classList.remove('xvoice-float-open');
         backdrop.classList.remove('xvoice-backdrop-show');
         root.style.transform = '';
+        if (wasOpen && lastFocused && document.contains(lastFocused)) {
+            try { lastFocused.focus(); } catch { /* 忽略 */ }
+        }
+        lastFocused = null;
     };
 
     const open = () => {
@@ -178,6 +199,9 @@ export function createFloatingPanel({ title, onFirstOpen }) {
         if (!mounted) {
             mounted = true;
             onFirstOpen?.(body);
+        }
+        if (!root.classList.contains('xvoice-float-open')) {
+            lastFocused = document.activeElement;
         }
         applyMode();
         root.classList.add('xvoice-float-open');
@@ -190,7 +214,7 @@ export function createFloatingPanel({ title, onFirstOpen }) {
             backdrop.classList.remove('xvoice-backdrop-show');
             clampIntoView(root);
         }
-        body.querySelector('[data-autofocus]')?.focus();
+        focusFirst(body);
     };
 
     root.querySelector('.xvoice-float-close').addEventListener('click', close);
