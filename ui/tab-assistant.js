@@ -3,7 +3,7 @@ import { testConnection, listModels } from '../core/llm.js';
 import { chat } from '../assistant/agent.js';
 import { stripCalls } from '../assistant/protocol.js';
 import { renderFields, bindFields, escapeHtml } from './form.js';
-import { createFloatingPanel } from './floating.js';
+import { createFloatingPanel, isTouchDevice } from './floating.js';
 import { icon } from './icons.js';
 
 let modelPicker = null;
@@ -98,7 +98,7 @@ function openModelPicker(pane) {
     if (!availableModels.length) return;
     modelPicker.open();
     renderModelPicker(modelPicker.body);
-    modelPicker.body.querySelector('[data-xv-model-search]')?.focus();
+    if (!isTouchDevice()) modelPicker.body.querySelector('[data-xv-model-search]')?.focus();
 }
 
 function createModelPicker(pane) {

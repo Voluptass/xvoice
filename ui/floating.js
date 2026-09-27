@@ -21,6 +21,14 @@ function isMobile() {
     return window.innerWidth < MOBILE_BP;
 }
 
+/**
+ * 触摸设备（手机 / 平板）。在这类设备上聚焦输入框会弹出软键盘，
+ * 所以选择弹窗只给鼠标设备自动聚焦搜索框。
+ */
+export function isTouchDevice() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+}
+
 function viewportSize() {
     const viewport = window.visualViewport;
     const layoutWidth = window.innerWidth || document.documentElement.clientWidth;

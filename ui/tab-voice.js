@@ -5,7 +5,7 @@ import { Provider } from '../core/constants.js';
 import { player, voiceOverride } from '../core/pipeline.js';
 import { getRoleVoices, currentCardLabel } from '../core/cast.js';
 import { previewVoice, stopPreview } from './preview.js';
-import { createFloatingPanel } from './floating.js';
+import { createFloatingPanel, isTouchDevice } from './floating.js';
 import { ICON } from './icons.js';
 import { eventSource, event_types } from '../../../../../script.js';
 
@@ -267,7 +267,8 @@ function openVoicePicker(pane, name) {
     pickerRole = name;
     voicePicker.open();
     renderPickerList(voicePicker.body);
-    voicePicker.body.querySelector('[data-xv-picker-search]')?.focus();
+    // 触摸设备不自动聚焦，免得一打开就弹软键盘
+    if (!isTouchDevice()) voicePicker.body.querySelector('[data-xv-picker-search]')?.focus();
 }
 
 // ── 页面 ────────────────────────────────────────
