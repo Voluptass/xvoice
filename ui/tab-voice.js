@@ -2,7 +2,7 @@ import { getSettings, saveSettings } from '../core/settings.js';
 import { renderFields, bindFields, escapeHtml } from './form.js';
 import { listProviders, listVoices, checkReady } from '../tts/index.js';
 import { Provider } from '../core/constants.js';
-import { voiceOverride } from '../core/pipeline.js';
+import { player, voiceOverride } from '../core/pipeline.js';
 import { getRoleVoices, currentCardLabel } from '../core/cast.js';
 import { previewVoice, stopPreview } from './preview.js';
 import { ICON } from './icons.js';
@@ -105,6 +105,13 @@ async function showVoiceList(pane) {
 
 let allVoices = [];
 let previewBtn = null;
+let autoPreviewTimer = null;
+
+/** 当前台本里该角色的台词。用它试听比通用样例直观；没有就回落到通用样例。 */
+function lineFor(speaker) {
+    const chunk = player.chunks.find((c) => c.speaker === speaker && c.text);
+    return chunk?.text || undefined;
+}
 
 function resetPreview() {
     if (!previewBtn) return;
@@ -118,9 +125,9 @@ function resetPreview() {
  * @param {HTMLButtonElement} btn
  * @param {object|undefined} override
  */
-async function togglePreview(pane, btn, override) {
+async function togglePreview(pane, btn, override, text, force = false) {
     const status = pane.querySelector('[data-xv-status]');
-    const same = previewBtn === btn;
+    const same = !force && previewBtn === btn;
     stopPreview();
     resetPreview();
     if (same) {
@@ -134,6 +141,9 @@ async function togglePreview(pane, btn, override) {
         return;
     }
 
+    // 试听优先：先停掉正在放的台本，避免两个声音叠在一起
+    if (player.active) player.stop();
+
     status.classList.remove('xvoice-error');
     status.textContent = '试听中…';
     previewBtn = btn;
@@ -143,6 +153,7 @@ async function togglePreview(pane, btn, override) {
     let failed = false;
     try {
         played = await previewVoice(override, {
+            text,
             onStart: () => {
                 if (previewBtn !== btn) return;
                 btn.classList.remove('xvoice-loading');
@@ -214,8 +225,8 @@ function paneHtml() {
             ${renderFields(DIRECTOR_FIELDS)}
             <div class="xvoice-cast-scope">当前角色卡：<b data-xv-card></b></div>
             <div data-xv-cast></div>
-            <small class="xvoice-hint">每个角色卡分开保存。先在上面拉取音色列表，点某个音色可填给下面选中的角色输入框，也能直接粘贴音色 id。
-            每个角色右侧的试听按钮可以直接听效果。</small>
+            <small class="xvoice-hint">每个角色卡分开保存。点音色列表里的音色可填给选中的角色，也能直接粘贴音色 id。
+            改完音色点右侧试听按钮，会直接用该角色在当前台本里的台词听效果；播放器里已生成的台词要重新点「朗读」才会换上新音色。</small>
         </details>`;
 }
 
@@ -255,6 +266,12 @@ function setCastVoice(pane, name, voiceId) {
     saveSettings();
     const input = pane.querySelector(`[data-cast-voice="${CSS.escape(name)}"]`);
     if (input) input.value = voiceId;
+    // 改完音色直接用该角色的台词试听一下，不用再跑回播放器
+    clearTimeout(autoPreviewTimer);
+    autoPreviewTimer = setTimeout(() => {
+        const btn = pane.querySelector(`[data-cast-preview="${CSS.escape(name)}"]`);
+        if (btn) togglePreview(pane, btn, voiceOverride(voiceId), lineFor(name), true);
+    }, 150);
 }
 
 /** 点音色：刚在编辑某个角色就填给它，否则改当前供应商的默认音色。 */
@@ -306,7 +323,7 @@ export function mountVoiceTab(pane) {
         if (castPlay) {
             const input = pane.querySelector(`[data-cast-voice="${CSS.escape(castPlay)}"]`);
             const btn = event.target.closest('[data-cast-preview]');
-            return togglePreview(pane, btn, voiceOverride(input?.value.trim()));
+            return togglePreview(pane, btn, voiceOverride(input?.value.trim()), lineFor(castPlay));
         }
 
         const preview = event.target.closest('[data-preview]')?.dataset.preview;
