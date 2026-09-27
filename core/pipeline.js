@@ -4,6 +4,7 @@ import { synthesize } from '../tts/index.js';
 import { Player } from '../player/player.js';
 import { getSettings } from './settings.js';
 import { Provider } from './constants.js';
+import { roleVoiceFor } from './cast.js';
 
 const MAX_INFLIGHT = 2;
 
@@ -123,10 +124,9 @@ export function voiceOverride(voiceId) {
     return tts.provider === Provider.MINIMAX ? { voiceId } : { voice: voiceId };
 }
 
-/** 按角色查它的音色覆盖。查不到就留给当前供应商默认音色。 */
+/** 按角色查它所在角色卡的音色覆盖。查不到就留给当前供应商默认音色。 */
 export function voiceFor(speaker) {
-    const { director } = getSettings();
-    return voiceOverride(director?.roleVoices?.[speaker]);
+    return voiceOverride(roleVoiceFor(speaker));
 }
 
 export function stop() {

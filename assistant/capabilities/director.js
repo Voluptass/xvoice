@@ -1,5 +1,6 @@
 import { registerAll } from '../registry.js';
 import { getSettings, saveSettings } from '../../core/settings.js';
+import { getRoleVoices, currentCardLabel } from '../../core/cast.js';
 import { direct, writeScript, castOf, extractDialogue } from '../../core/director.js';
 import { speakScript } from '../../core/pipeline.js';
 import { lastCharacterMessage } from '../../core/chat-source.js';
@@ -33,10 +34,16 @@ registerAll([
     },
     {
         id: 'director.status',
-        summary: '查看导演的音色分配模式与已配好的角色音色表',
+        summary: '查看导演的音色分配模式与当前角色卡已配好的角色音色表',
         handler: () => {
-            const { voiceMode, roleVoices } = directorSettings();
-            return { voiceMode, roleVoices, 已配角色数: Object.keys(roleVoices).length };
+            const { voiceMode } = directorSettings();
+            const roleVoices = getRoleVoices();
+            return {
+                voiceMode,
+                角色卡: currentCardLabel() || '（未选择）',
+                roleVoices,
+                已配角色数: Object.keys(roleVoices).length,
+            };
         },
     },
     {
@@ -58,18 +65,19 @@ registerAll([
         params: { speaker: '角色名，如 男主 / 女主 / 旁白', voice: '音色 id' },
         handler: ({ speaker, voice }) => {
             if (!speaker || !voice) throw new Error('需要同时提供 speaker 和 voice');
-            directorSettings().roleVoices[speaker] = voice;
+            getRoleVoices()[speaker] = voice;
             saveSettings();
             return { speaker, voice };
         },
     },
     {
         id: 'director.clearRoleVoices',
-        summary: '清空角色音色表，让下次导演重新分配',
+        summary: '清空当前角色卡的角色音色表，让下次导演重新分配',
         mutates: true,
         handler: () => {
-            const count = Object.keys(directorSettings().roleVoices).length;
-            directorSettings().roleVoices = {};
+            const voices = getRoleVoices();
+            const count = Object.keys(voices).length;
+            for (const key of Object.keys(voices)) delete voices[key];
             saveSettings();
             return { cleared: count };
         },

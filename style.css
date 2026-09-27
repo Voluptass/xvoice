@@ -280,6 +280,17 @@
     margin-top: 10px;
 }
 
+.xvoice-cast-scope {
+    font-size: 0.85em;
+    opacity: 0.75;
+    margin: 4px 0 8px;
+}
+
+.xvoice-cast-scope b {
+    color: var(--xv-accent);
+    font-weight: 600;
+}
+
 .xvoice-cast {
     display: flex;
     align-items: center;

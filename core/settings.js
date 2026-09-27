@@ -62,6 +62,7 @@ const DEFAULTS = {
     director: {
         voiceMode: 'ai',
         roleVoices: {},
+        roleVoicesByCard: {},
     },
 };
 

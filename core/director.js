@@ -1,5 +1,6 @@
 import { requestChat } from './llm.js';
 import { getActiveLlmProfile, getSettings, saveSettings } from './settings.js';
+import { getRoleVoices } from './cast.js';
 import { lastCharacterMessage } from './chat-source.js';
 import { applyAll } from '../regex/apply.js';
 import { listVoices } from '../tts/index.js';
@@ -146,16 +147,17 @@ async function pickVoicesByAi(cast, signal) {
 export async function assignVoices(cast, signal) {
     const { director } = getSettings();
     const mode = director.voiceMode === 'manual' ? 'manual' : 'ai';
-    const pending = cast.filter((name) => !director.roleVoices[name]);
+    const voices = getRoleVoices();
+    const pending = cast.filter((name) => !voices[name]);
     if (pending.length) {
-        if (mode === 'ai') Object.assign(director.roleVoices, await pickVoicesByAi(pending, signal));
+        if (mode === 'ai') Object.assign(voices, await pickVoicesByAi(pending, signal));
         pending.forEach((name) => {
-            if (!director.roleVoices[name]) director.roleVoices[name] = '';
+            if (!voices[name]) voices[name] = '';
         });
         saveSettings();
     }
-    const missing = cast.filter((name) => !director.roleVoices[name]);
-    return { mode, roleVoices: { ...director.roleVoices }, missing };
+    const missing = cast.filter((name) => !voices[name]);
+    return { mode, roleVoices: { ...voices }, missing };
 }
 
 /**

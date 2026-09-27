@@ -3,8 +3,10 @@ import { renderFields, bindFields, escapeHtml } from './form.js';
 import { listProviders, listVoices, checkReady } from '../tts/index.js';
 import { Provider } from '../core/constants.js';
 import { voiceOverride } from '../core/pipeline.js';
+import { getRoleVoices, currentCardLabel } from '../core/cast.js';
 import { previewVoice, stopPreview } from './preview.js';
 import { ICON } from './icons.js';
+import { eventSource, event_types } from '../../../../../script.js';
 
 const PROVIDER_FIELDS = {
     [Provider.MINIMAX]: [
@@ -163,10 +165,9 @@ async function togglePreview(pane, btn, override) {
 // ── 角色配音表 ──────────────────────────────────
 
 function castHtml() {
-    const { roleVoices } = getSettings().director;
-    const rows = Object.entries(roleVoices);
+    const rows = Object.entries(getRoleVoices());
     if (!rows.length) {
-        return '<p class="xvoice-hint">还没有角色配音。点播放器里的「AI 导演」拆一次台本就会自动生成。</p>';
+        return '<p class="xvoice-hint">当前角色卡还没有角色配音。点播放器里的「AI 导演」拆一次台本就会自动生成。</p>';
     }
     return rows.map(([name, voice]) => `<div class="xvoice-cast" data-cast="${escapeHtml(name)}">
         <span class="xvoice-cast-name">${escapeHtml(name)}</span>
@@ -181,6 +182,8 @@ function castHtml() {
 
 function renderCast(pane) {
     pane.querySelector('[data-xv-cast]').innerHTML = castHtml();
+    const label = pane.querySelector('[data-xv-card]');
+    if (label) label.textContent = currentCardLabel() || '（未选择角色卡）';
 }
 
 // ── 页面 ────────────────────────────────────────
@@ -209,8 +212,9 @@ function paneHtml() {
         <details class="xvoice-cast-box" open>
             <summary>角色配音（AI 导演用）</summary>
             ${renderFields(DIRECTOR_FIELDS)}
+            <div class="xvoice-cast-scope">当前角色卡：<b data-xv-card></b></div>
             <div data-xv-cast></div>
-            <small class="xvoice-hint">先在上面拉取音色列表，点某个音色可填给下面选中的角色输入框，也能直接粘贴音色 id。
+            <small class="xvoice-hint">每个角色卡分开保存。先在上面拉取音色列表，点某个音色可填给下面选中的角色输入框，也能直接粘贴音色 id。
             每个角色右侧的试听按钮可以直接听效果。</small>
         </details>`;
 }
@@ -247,8 +251,7 @@ function trackCastFocus(pane, state) {
 }
 
 function setCastVoice(pane, name, voiceId) {
-    const { roleVoices } = getSettings().director;
-    roleVoices[name] = voiceId;
+    getRoleVoices()[name] = voiceId;
     saveSettings();
     const input = pane.querySelector(`[data-cast-voice="${CSS.escape(name)}"]`);
     if (input) input.value = voiceId;
@@ -311,7 +314,7 @@ export function mountVoiceTab(pane) {
 
         const del = event.target.closest('[data-cast-del]')?.dataset.castDel;
         if (del) {
-            delete getSettings().director.roleVoices[del];
+            delete getRoleVoices()[del];
             saveSettings();
             return renderCast(pane);
         }
@@ -325,5 +328,9 @@ export function mountVoiceTab(pane) {
         renderCast(pane);
         syncVisibility(pane);
     });
+    // 换角色卡后，角色配音表跟着切
+    if (event_types.CHAT_CHANGED) {
+        eventSource.on(event_types.CHAT_CHANGED, () => renderCast(pane));
+    }
     syncVisibility(pane);
 }

@@ -6,10 +6,10 @@
     "js": "index.js",
     "css": "style.css",
     "author": "",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "homePage": "",
     "hooks": {
         "update": "onExtensionUpdate"
     },
-    "update_notes": "0.2.0：面板交互与可访问性全面优化；「提取对话」改为本地即时提取；用户发言默认不列入朗读范围（可在播放器里开启）；更新后自动刷新页面"
+    "update_notes": "0.3.0：角色配音按角色卡分开保存；「AI 提取对话」独立成按钮；本地提取拒绝元信息说话人；更新后自动刷新"
 }
