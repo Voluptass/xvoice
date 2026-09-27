@@ -5,6 +5,7 @@ import { Provider } from '../core/constants.js';
 import { player, voiceOverride } from '../core/pipeline.js';
 import { getRoleVoices, currentCardLabel } from '../core/cast.js';
 import { previewVoice, stopPreview } from './preview.js';
+import { createFloatingPanel } from './floating.js';
 import { ICON } from './icons.js';
 import { eventSource, event_types } from '../../../../../script.js';
 
@@ -75,10 +76,31 @@ function renderVoiceList(pane) {
         !query || v.id.toLowerCase().includes(query) || (v.name || '').toLowerCase().includes(query));
 
     pane.querySelector('[data-xv-voice-count]').textContent = allVoices.length
-        ? `${list.length} / ${allVoices.length}` : '';
+        ? `${list.length} / ${allVoices.length}${voicesFromCache ? ' · 缓存' : ''}` : '';
     box.innerHTML = list.length
         ? list.map((v) => voiceRow(v, selected)).join('')
         : `<p class="xvoice-hint">${allVoices.length ? '没有匹配的音色。' : '还没有拉取到音色。'}</p>`;
+}
+
+/** 当前供应商缓存的音色列表。 */
+function cachedVoices() {
+    const { tts } = getSettings();
+    return tts.voiceCache?.[tts.provider]?.voices || [];
+}
+
+/** 把缓存列表读进内存（顶替上一次的）。返回是否命中缓存。 */
+function loadCachedVoices() {
+    allVoices = cachedVoices().slice();
+    voicesFromCache = allVoices.length > 0;
+    return voicesFromCache;
+}
+
+/** 拉取成功后写入缓存，下次打开直接用，不用重新拉。 */
+function cacheVoices(voices) {
+    const { tts } = getSettings();
+    if (!tts.voiceCache) tts.voiceCache = {};
+    tts.voiceCache[tts.provider] = { at: Date.now(), voices };
+    saveSettings();
 }
 
 async function showVoiceList(pane) {
@@ -90,10 +112,12 @@ async function showVoiceList(pane) {
     try {
         const voices = await listVoices();
         allVoices = voices.slice(0, 300);
+        voicesFromCache = false;
         if (!allVoices.length) {
             box.innerHTML = '<p class="xvoice-hint">当前供应商不支持在线拉取音色，请手动填写音色 id。</p>';
             return;
         }
+        cacheVoices(allVoices);
         renderVoiceList(pane);
         status.classList.remove('xvoice-error');
     } catch (e) {
@@ -104,6 +128,7 @@ async function showVoiceList(pane) {
 // ── 试听 ────────────────────────────────────────
 
 let allVoices = [];
+let voicesFromCache = false;
 let previewBtn = null;
 let autoPreviewTimer = null;
 
@@ -184,6 +209,8 @@ function castHtml() {
         <span class="xvoice-cast-name">${escapeHtml(name)}</span>
         <input class="text_pole xvoice-cast-voice" data-cast-voice="${escapeHtml(name)}"
             value="${escapeHtml(voice)}" placeholder="音色 id" autocomplete="off">
+        <button type="button" class="xvoice-cast-list" data-cast-list="${escapeHtml(name)}"
+            title="从音色列表选择" aria-label="为 ${escapeHtml(name)} 选择音色">${ICON.list}</button>
         <button type="button" class="xvoice-cast-play" data-cast-preview="${escapeHtml(name)}"
             title="试听这个角色的音色" aria-label="试听角色 ${escapeHtml(name)} 的音色">${ICON.preview}</button>
         <button type="button" class="xvoice-del" data-cast-del="${escapeHtml(name)}"
@@ -195,6 +222,52 @@ function renderCast(pane) {
     pane.querySelector('[data-xv-cast]').innerHTML = castHtml();
     const label = pane.querySelector('[data-xv-card]');
     if (label) label.textContent = currentCardLabel() || '（未选择角色卡）';
+}
+
+// ── 角色音色快速选择（弹窗） ─────────────────────
+
+let voicePicker = null;
+let pickerRole = '';
+
+function renderPickerList(body, filter = '') {
+    const query = String(filter).trim().toLowerCase();
+    const list = allVoices.filter((v) =>
+        !query || v.id.toLowerCase().includes(query) || (v.name || '').toLowerCase().includes(query));
+    body.querySelector('[data-xv-picker-list]').innerHTML = list.length
+        ? list.slice(0, 400).map((v) => `<button type="button" class="xvoice-voice-option" data-pick="${escapeHtml(v.id)}">
+                <span class="xvoice-voice-option-name">${escapeHtml(v.name)}</span>
+                <code class="xvoice-voice-option-id">${escapeHtml(v.id)}</code>
+            </button>`).join('')
+        : `<p class="xvoice-hint">${allVoices.length
+            ? '没有匹配的音色。'
+            : '还没有音色列表，请先关闭并点上方「拉取音色列表」。'}</p>`;
+}
+
+function createVoicePicker(pane) {
+    return createFloatingPanel({
+        title: '选择音色',
+        onFirstOpen: (body) => {
+            body.innerHTML = `<input class="text_pole xvoice-voice-search" data-xv-picker-search
+                    placeholder="搜索音色名称或 id…" autocomplete="off">
+                <div class="xvoice-model-list" data-xv-picker-list></div>`;
+            body.addEventListener('input', (event) => {
+                if (event.target.matches('[data-xv-picker-search]')) renderPickerList(body, event.target.value);
+            });
+            body.addEventListener('click', (event) => {
+                const id = event.target.closest('[data-pick]')?.dataset.pick;
+                if (!id) return;
+                setCastVoice(pane, pickerRole, id);
+                voicePicker?.close();
+            });
+        },
+    });
+}
+
+function openVoicePicker(pane, name) {
+    pickerRole = name;
+    voicePicker.open();
+    renderPickerList(voicePicker.body);
+    voicePicker.body.querySelector('[data-xv-picker-search]')?.focus();
 }
 
 // ── 页面 ────────────────────────────────────────
@@ -225,8 +298,8 @@ function paneHtml() {
             ${renderFields(DIRECTOR_FIELDS)}
             <div class="xvoice-cast-scope">当前角色卡：<b data-xv-card></b></div>
             <div data-xv-cast></div>
-            <small class="xvoice-hint">每个角色卡分开保存。点音色列表里的音色可填给选中的角色，也能直接粘贴音色 id。
-            改完音色点右侧试听按钮，会直接用该角色在当前台本里的台词听效果；播放器里已生成的台词要重新点「朗读」才会换上新音色。</small>
+            <small class="xvoice-hint">每个角色卡分开保存。点角色右侧的列表按钮可从拉取到的音色里快速选择，也能直接粘贴音色 id。
+            改完音色点右侧试听按钮，会直接用该角色在当前台本里的台词听效果；播放器里已生成的台词要重新点「朗读」才会换上新音色。音色列表会缓存，点「拉取音色列表」才刷新。</small>
         </details>`;
 }
 
@@ -284,14 +357,23 @@ export function mountVoiceTab(pane) {
     pane.innerHTML = paneHtml();
     renderCast(pane);
 
+    voicePicker = createVoicePicker(pane);
+    // 有缓存就直接显示，不用重新拉
+    if (loadCachedVoices()) {
+        pane.querySelector('[data-xv-voice-panel]').hidden = false;
+        renderVoiceList(pane);
+    }
+
     const castFocus = { active: '' };
     const refreshers = [];
     const select = pane.querySelector('[data-xv-provider]');
     select.addEventListener('change', () => {
         getSettings().tts.provider = select.value;
-        allVoices = [];
-        pane.querySelector('[data-xv-voice-panel]').hidden = true;
         saveSettings();
+        const hasCache = loadCachedVoices();
+        pane.querySelector('[data-xv-voice-panel]').hidden = !hasCache;
+        pane.querySelector('[data-xv-voice-list]').innerHTML = '';
+        if (hasCache) renderVoiceList(pane);
         syncVisibility(pane);
     });
 
@@ -318,6 +400,9 @@ export function mountVoiceTab(pane) {
 
     pane.addEventListener('click', async (event) => {
         if (event.target.closest('[data-act="voices"]')) return showVoiceList(pane);
+
+        const castList = event.target.closest('[data-cast-list]')?.dataset.castList;
+        if (castList) return openVoicePicker(pane, castList);
 
         const castPlay = event.target.closest('[data-cast-preview]')?.dataset.castPreview;
         if (castPlay) {

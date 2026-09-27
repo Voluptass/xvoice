@@ -247,7 +247,8 @@
 }
 
 .xvoice-voice-play,
-.xvoice-cast-play {
+.xvoice-cast-play,
+.xvoice-cast-list {
     flex: none;
     width: 28px;
     height: 28px;
@@ -265,7 +266,8 @@
 }
 
 .xvoice-voice-play:hover,
-.xvoice-cast-play:hover {
+.xvoice-cast-play:hover,
+.xvoice-cast-list:hover {
     background: var(--white20a);
 }
 
@@ -950,6 +952,7 @@
 .xvoice-float--mobile .xvoice-del,
 .xvoice-float--mobile .xvoice-voice-play,
 .xvoice-float--mobile .xvoice-cast-play,
+.xvoice-float--mobile .xvoice-cast-list,
 .xvoice-float--mobile .xvoice-float-close {
     width: 44px;
     height: 44px;
@@ -1010,6 +1013,49 @@
 .xvoice-model-option:focus {
     background: var(--white20a, rgb(255 255 255 / 8%));
     outline: none;
+}
+
+/* 音色选择弹窗里的选项 */
+.xvoice-voice-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--SmartThemeBorderColor, #4a4a52);
+    border-radius: 4px;
+    background: var(--black30a, rgb(0 0 0 / 20%));
+    color: var(--SmartThemeBodyColor);
+    font: inherit;
+    font-size: 0.85em;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.xvoice-voice-option:hover,
+.xvoice-voice-option:focus {
+    background: var(--white20a, rgb(255 255 255 / 8%));
+    outline: none;
+}
+
+.xvoice-voice-option-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.xvoice-voice-option-id {
+    flex: none;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.55;
+    font-size: 0.9em;
 }
 
 /* ── 尊重用户的减少动效偏好 ── */

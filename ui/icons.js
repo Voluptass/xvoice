@@ -24,4 +24,5 @@ export const ICON = {
     director: icon('clapperboard'),
     extract: icon('quote-left'),
     extractAi: icon('robot'),
+    list: icon('list'),
 };

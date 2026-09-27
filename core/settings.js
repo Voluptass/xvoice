@@ -25,6 +25,7 @@ const DEFAULTS = {
     tts: {
         provider: Provider.MINIMAX,
         cacheEnabled: true,
+        voiceCache: {},
         minimax: {
             apiKeys: [],
             platform: 'cn',
