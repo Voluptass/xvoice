@@ -307,6 +307,23 @@ function extractLineHtml(line) {
     </div>`;
 }
 
+/** 换角色卡 / 换聊天时把播放列表和提取结果清干净，别把上一张卡的东西留在原地。 */
+function resetForChat(pane) {
+    player.clear();
+    extracted = [];
+    const box = pane.querySelector('[data-pl-extract]');
+    if (box) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        box.classList.remove('xvoice-error');
+    }
+    const status = pane.querySelector('[data-pl-director]');
+    if (status) {
+        status.textContent = '';
+        status.classList.remove('xvoice-error');
+    }
+}
+
 export function mountPlayerTab(pane, ctx) {
     pane.innerHTML = paneHtml();
     renderPicker(pane);
@@ -358,6 +375,11 @@ export function mountPlayerTab(pane, ctx) {
     [event_types.MESSAGE_RENDERED, event_types.CHARACTER_MESSAGE_RENDERED, event_types.CHAT_CHANGED]
         .filter(Boolean)
         .forEach((evt) => eventSource.on(evt, () => renderPicker(pane)));
+
+    // 换角色卡 / 换聊天时，把播放列表和提取结果一起清掉
+    if (event_types.CHAT_CHANGED) {
+        eventSource.on(event_types.CHAT_CHANGED, () => resetForChat(pane));
+    }
 
     update(pane, { state: player.state, index: player.index, chunks: player.chunks });
 }

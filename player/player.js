@@ -51,6 +51,11 @@ export class Player {
         this.#emit();
     }
 
+    /** 清空播放列表并停止播放（换角色卡 / 换聊天时用）。 */
+    clear() {
+        this.load([], null);
+    }
+
     play(from = 0) {
         if (!this.#chunks.length) return;
         this.#run(Math.max(0, Math.min(from, this.#chunks.length - 1)));
