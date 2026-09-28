@@ -54,3 +54,32 @@ export async function listVoices() {
     if (!provider.listVoices) return [];
     return provider.listVoices(config);
 }
+
+/** 当前供应商是否支持克隆音色。 */
+export function supportsClone() {
+    try {
+        return typeof currentProvider().provider.cloneVoice === 'function';
+    } catch {
+        return false;
+    }
+}
+
+/** 校验自定义音色 id；返回空串表示合法。不支持克隆的供应商返回提示。 */
+export function validateVoiceId(voiceId) {
+    try {
+        const { provider } = currentProvider();
+        return provider.validateVoiceId ? provider.validateVoiceId(voiceId) : '当前供应商不支持克隆音色';
+    } catch (e) {
+        return e.message;
+    }
+}
+
+/**
+ * 克隆音色（当前仅 MiniMax 实现）。
+ * @param {{blob: Blob, voiceId: string, prompt?: object, signal?: AbortSignal}} options
+ */
+export async function cloneVoice(options) {
+    const { provider, config } = currentProvider();
+    if (typeof provider.cloneVoice !== 'function') throw new Error('当前供应商不支持克隆音色');
+    return provider.cloneVoice(options, config);
+}

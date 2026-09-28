@@ -170,6 +170,23 @@
     margin-bottom: 6px;
 }
 
+/* ── 克隆音色 ── */
+.xvoice-clone {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: var(--xv-radius);
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.xvoice-clone .xvoice-section {
+    margin-top: 0;
+}
+
+.xvoice-clone .menu_button.xvoice-recording {
+    color: var(--warning, #e57373);
+    border-color: var(--warning, #e57373);
+}
+
 /* ── 音色列表 ── */
 .xvoice-voice-panel {
     display: flex;

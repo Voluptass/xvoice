@@ -1,10 +1,11 @@
 import { getSettings, saveSettings } from '../core/settings.js';
 import { renderFields, bindFields, escapeHtml } from './form.js';
-import { listProviders, listVoices, checkReady } from '../tts/index.js';
+import { listProviders, listVoices, checkReady, cloneVoice, validateVoiceId, supportsClone } from '../tts/index.js';
 import { Provider } from '../core/constants.js';
 import { player, voiceOverride } from '../core/pipeline.js';
 import { getRoleVoices, currentCardLabel } from '../core/cast.js';
 import { previewVoice, stopPreview } from './preview.js';
+import { Recorder, canRecord } from './recorder.js';
 import { createFloatingPanel, isTouchDevice } from './floating.js';
 import { ICON } from './icons.js';
 import { eventSource, event_types } from '../../../../../script.js';
@@ -131,6 +132,9 @@ let allVoices = [];
 let voicesFromCache = false;
 let previewBtn = null;
 let autoPreviewTimer = null;
+let cloneBlob = null;
+let cloneRecorder = null;
+let cloneTimer = null;
 
 /** 当前台本里该角色的台词。用它试听比通用样例直观；没有就回落到通用样例。 */
 function lineFor(speaker) {
@@ -224,6 +228,92 @@ function renderCast(pane) {
     if (label) label.textContent = currentCardLabel() || '（未选择角色卡）';
 }
 
+// ── 克隆音色（MiniMax） ─────────────────────────
+
+function setCloneFile(pane, blob, label) {
+    cloneBlob = blob;
+    const el = pane.querySelector('[data-clone-file]');
+    el.textContent = label;
+    el.classList.remove('xvoice-error');
+}
+
+async function toggleRecord(pane) {
+    const btn = pane.querySelector('[data-clone="record"]');
+    const status = pane.querySelector('[data-clone-file]');
+
+    if (cloneRecorder) {
+        clearInterval(cloneTimer);
+        cloneTimer = null;
+        const rec = cloneRecorder;
+        cloneRecorder = null;
+        btn.classList.remove('xvoice-recording');
+        btn.textContent = '● 录音';
+        try {
+            const blob = await rec.stop();
+            const seconds = Math.round(blob.size / (16000 * 2));
+            setCloneFile(pane, blob, `录音（约 ${seconds} 秒）`);
+        } catch (e) {
+            status.textContent = `录音处理失败：${e.message}`;
+            status.classList.add('xvoice-error');
+        }
+        return;
+    }
+
+    const rec = new Recorder();
+    try {
+        await rec.start();
+    } catch (e) {
+        status.textContent = `无法录音：${e.message}`;
+        status.classList.add('xvoice-error');
+        return;
+    }
+    cloneRecorder = rec;
+    status.textContent = '';
+    status.classList.remove('xvoice-error');
+    btn.classList.add('xvoice-recording');
+    const tick = () => {
+        btn.textContent = `■ 停止 (${Math.floor(rec.elapsed / 1000)}s)`;
+        if (rec.elapsed >= 5 * 60_000) toggleRecord(pane);
+    };
+    tick();
+    cloneTimer = setInterval(tick, 500);
+}
+
+async function startClone(pane) {
+    const btn = pane.querySelector('[data-clone="start"]');
+    const status = pane.querySelector('[data-clone-status]');
+    const voiceId = pane.querySelector('[data-clone-voice-id]').value.trim();
+    if (btn.disabled) return;
+
+    if (!cloneBlob) {
+        status.textContent = '请先选择音频文件，或录一段音。';
+        status.classList.add('xvoice-error');
+        return;
+    }
+    const invalid = validateVoiceId(voiceId);
+    if (invalid) {
+        status.textContent = invalid;
+        status.classList.add('xvoice-error');
+        return;
+    }
+
+    btn.disabled = true;
+    status.classList.remove('xvoice-error');
+    status.textContent = '正在上传并复刻…';
+    try {
+        await cloneVoice({ blob: cloneBlob, voiceId });
+        status.textContent = `✅ 已创建 ${voiceId}，正在刷新音色列表…`;
+        await showVoiceList(pane);
+        status.textContent = `✅ 已创建 ${voiceId}，可在下面角色配音里选它。`;
+        previewVoice(voiceOverride(voiceId)).catch(() => {});
+    } catch (e) {
+        status.textContent = e.message;
+        status.classList.add('xvoice-error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 // ── 角色音色快速选择（弹窗） ─────────────────────
 
 let voicePicker = null;
@@ -284,6 +374,26 @@ function paneHtml() {
             <select class="text_pole" data-xv-provider>${options}</select>
         </div>
         ${blocks}
+        <div class="xvoice-clone" data-xv-clone hidden>
+            <div class="xvoice-section">克隆音色（快速复刻）</div>
+            <div class="xvoice-row">
+                <button class="menu_button" data-clone="file">选择音频文件</button>
+                <button class="menu_button" data-clone="record" hidden>● 录音</button>
+                <span class="xvoice-status" data-clone-file></span>
+            </div>
+            <div class="xvoice-field">
+                <label>音色 id</label>
+                <input class="text_pole" data-clone-voice-id autocomplete="off"
+                    placeholder="8~256 位，首字符英文字母，如 MyCharVoice01">
+            </div>
+            <div class="xvoice-row">
+                <button class="menu_button" data-clone="start">开始克隆</button>
+                <span class="xvoice-status" data-clone-status></span>
+            </div>
+            <small class="xvoice-hint">音频需 10 秒 ~ 5 分钟，支持 mp3 / m4a / wav；录音会自动转成 wav。
+            复刻出的音色若 7 天内未在朗读中使用会被删除；需 MiniMax 账号已完成个人/企业实名认证。</small>
+            <input type="file" accept="audio/*" data-clone-input hidden>
+        </div>
         <div class="xvoice-row">
             <button class="menu_button" data-act="voices">拉取音色列表</button>
             <span class="xvoice-status" data-xv-voice-count></span>
@@ -311,6 +421,8 @@ function syncVisibility(pane) {
     if (select && select.value !== current) select.value = current;
     pane.querySelectorAll('.xvoice-provider')
         .forEach((el) => { el.hidden = el.dataset.provider !== current; });
+    const cloneBox = pane.querySelector('[data-xv-clone]');
+    if (cloneBox) cloneBox.hidden = !supportsClone();
     const status = pane.querySelector('[data-xv-status]');
     const issue = checkReady();
     status.textContent = issue ? `⚠ ${issue}` : '✓ 配置就绪';
@@ -359,6 +471,8 @@ export function mountVoiceTab(pane) {
     renderCast(pane);
 
     voicePicker = createVoicePicker(pane);
+    // 录音入口只在支持的环境（https / localhost）显示
+    pane.querySelector('[data-clone="record"]').hidden = !canRecord();
     // 有缓存就直接显示，不用重新拉
     if (loadCachedVoices()) {
         pane.querySelector('[data-xv-voice-panel]').hidden = false;
@@ -397,10 +511,19 @@ export function mountVoiceTab(pane) {
     pane.addEventListener('change', (event) => {
         const name = event.target.closest('[data-cast-voice]')?.dataset.castVoice;
         if (name) setCastVoice(pane, name, event.target.value.trim());
+        if (event.target.matches('[data-clone-input]')) {
+            const file = event.target.files?.[0];
+            if (file) setCloneFile(pane, file, `${file.name}（${Math.round(file.size / 1024)} KB）`);
+        }
     });
 
     pane.addEventListener('click', async (event) => {
         if (event.target.closest('[data-act="voices"]')) return showVoiceList(pane);
+
+        const cloneAct = event.target.closest('[data-clone]')?.dataset.clone;
+        if (cloneAct === 'file') return pane.querySelector('[data-clone-input]').click();
+        if (cloneAct === 'record') return toggleRecord(pane);
+        if (cloneAct === 'start') return startClone(pane);
 
         const castList = event.target.closest('[data-cast-list]')?.dataset.castList;
         if (castList) return openVoicePicker(pane, castList);

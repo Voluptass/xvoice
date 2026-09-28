@@ -6,10 +6,10 @@
     "js": "index.js",
     "css": "style.css",
     "author": "",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "homePage": "",
     "hooks": {
         "update": "onExtensionUpdate"
     },
-    "update_notes": "0.3.0：角色配音按角色卡分开保存；「AI 提取对话」独立成按钮；本地提取拒绝元信息说话人；更新后自动刷新"
+    "update_notes": "0.4.0：MiniMax 克隆音色（选文件 / 录音）；音色列表缓存 + 角色音色弹窗选择；角色配音按角色卡分开保存；换卡清空播放列表；本地提取拒绝元信息说话人"
 }

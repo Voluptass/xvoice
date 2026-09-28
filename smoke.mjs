@@ -1,4 +1,6 @@
 import { clean, split, parseDialogue, dialogueConfidence } from './core/text.js';
+import { mixToMono, resample, encodeWav } from './core/audio.js';
+import { validateVoiceId } from './tts/minimax.js';
 import { applyAll } from './regex/apply.js';
 import { inspect } from './regex/danger.js';
 import { fromStFormat, toStFormat, createEntry, BUILTIN_ENTRIES } from './regex/entry.js';
@@ -120,6 +122,29 @@ check('解析出两个调用', parseCalls(reply).map((c) => c.id), ['diagnose.ru
 check('去掉标签留自然语言', stripCalls(reply), '我看一下。顺便查正则');
 check('坏 JSON 被标记', !!parseCalls('<xv name="a">{坏}</xv>')[0].error, true);
 check('结果格式化', formatResults([{ ok: true, id: 'a', result: 1 }]), '<xv-result name="a">1</xv-result>');
+
+console.log('\n[音频编码]');
+check('mixToMono 取平均',
+    Array.from(mixToMono([new Float32Array([1, 0]), new Float32Array([0, 1])])), [0.5, 0.5]);
+check('单声道原样返回', Array.from(mixToMono([new Float32Array([0.25, -0.25])])), [0.25, -0.25]);
+check('resample 长度正确', resample(new Float32Array(100), 100, 50).length, 50);
+check('resample 同率原样', resample(new Float32Array(10), 16000, 16000).length, 10);
+const wav = encodeWav(new Float32Array([0, 0.5, -0.5]), 16000);
+const dv = new DataView(wav.buffer);
+check('WAV RIFF 头', String.fromCharCode(...wav.slice(0, 4)), 'RIFF');
+check('WAV WAVE 标记', String.fromCharCode(...wav.slice(8, 12)), 'WAVE');
+check('WAV 总长 = 44 + 采样数*2', wav.length, 44 + 3 * 2);
+check('WAV 声道数', dv.getUint16(22, true), 1);
+check('WAV 采样率', dv.getUint32(24, true), 16000);
+check('WAV 位深', dv.getUint16(34, true), 16);
+check('WAV 数据段长度', dv.getUint32(40, true), 6);
+
+console.log('\n[克隆音色 id 校验]');
+check('合法 id', validateVoiceId('MyCharVoice01'), '');
+checkThat('过短被拒', !!validateVoiceId('abc'), validateVoiceId('abc'));
+checkThat('首字符非字母被拒', !!validateVoiceId('1abcdefgh'), validateVoiceId('1abcdefgh'));
+checkThat('末位 - / _ 被拒', !!validateVoiceId('abcdefgh-') && !!validateVoiceId('abcdefgh_'), validateVoiceId('abcdefgh-'));
+checkThat('非法字符被拒', !!validateVoiceId('abcdefgh!'), validateVoiceId('abcdefgh!'));
 
 console.log('\n[音频解码]');
 const blob = hexToBlob('494433', 'audio/mpeg');
