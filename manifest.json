@@ -6,10 +6,10 @@
     "js": "index.js",
     "css": "style.css",
     "author": "",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "homePage": "",
     "hooks": {
         "update": "onExtensionUpdate"
     },
-    "update_notes": "0.4.0：MiniMax 克隆音色（选文件 / 录音）；音色列表缓存 + 角色音色弹窗选择；角色配音按角色卡分开保存；换卡清空播放列表；本地提取拒绝元信息说话人"
+    "update_notes": "0.4.1：助手页重做（空状态快捷入口 / 头像气泡 / 集成输入框）；页签栏固定不随内容滚动；触摸设备不再自动聚焦输入框"
 }

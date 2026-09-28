@@ -21,14 +21,40 @@ const LLM_FIELDS = [
 const history = [];
 let busy = false;
 
+// ── 对话 ────────────────────────────────────────
+
+/** 还没有消息时显示的引导 + 快捷提问。 */
+function emptyStateHtml() {
+    return `<div class="xvoice-chat-empty" data-xv-empty>
+        <p>我能帮你排查朗读没声音、配置正则、挑音色和模型。<br>不知道从哪开始，点下面的快捷入口就行。</p>
+        <div class="xvoice-chips">
+            <button type="button" class="xvoice-chip" data-as="diagnose">${icon('stethoscope')} 一键自检</button>
+            <button type="button" class="xvoice-chip" data-chip="朗读没有声音，帮我按顺序排查一下可能的原因">朗读没声音</button>
+            <button type="button" class="xvoice-chip" data-chip="帮我配一条去掉【】状态栏的正则规则">配去状态栏正则</button>
+            <button type="button" class="xvoice-chip" data-chip="看一下我的音色配置有没有问题，给点建议">检查音色配置</button>
+        </div>
+    </div>`;
+}
+
 function bubble(pane, role, text = '') {
+    const log = pane.querySelector('[data-xv-chat]');
+    log.querySelector('[data-xv-empty]')?.remove();
     const el = document.createElement('div');
     el.className = `xvoice-msg xvoice-msg-${role}`;
-    el.innerHTML = `<div class="xvoice-msg-body">${escapeHtml(text)}</div><div class="xvoice-calls"></div>`;
-    const log = pane.querySelector('[data-xv-chat]');
+    el.innerHTML = `<span class="xvoice-avatar" aria-hidden="true">${role === 'user' ? icon('user') : icon('wand-magic-sparkles')}</span>
+        <div class="xvoice-bubble">
+            <div class="xvoice-msg-body">${escapeHtml(text)}</div>
+            <div class="xvoice-calls"></div>
+        </div>`;
     log.append(el);
     log.scrollTop = log.scrollHeight;
     return el;
+}
+
+/** 清空对话，回到引导状态。 */
+function resetChat(pane) {
+    history.length = 0;
+    pane.querySelector('[data-xv-chat]').innerHTML = emptyStateHtml();
 }
 
 function showCall(el, { id, status, result }) {
@@ -73,6 +99,24 @@ async function send(pane, text) {
     } finally {
         busy = false;
         setBusy(pane, false);
+    }
+}
+
+// ── 模型配置 ────────────────────────────────────
+
+/** 摘要行上的小圆点 + 当前模型名。 */
+function syncConfig(pane) {
+    const { profile } = getActiveLlmProfile();
+    const configured = !!profile.apiUrl;
+    const label = pane.querySelector('[data-xv-config-label]');
+    if (label) {
+        const model = profile.model ? `：${profile.model}` : '';
+        label.textContent = `助手模型${model}${configured ? '' : '（未配置）'}`;
+    }
+    const dot = pane.querySelector('[data-xv-dot]');
+    if (dot) {
+        dot.classList.toggle('ok', configured);
+        dot.classList.toggle('warn', !configured);
     }
 }
 
@@ -143,11 +187,16 @@ async function loadModels(pane) {
     }
 }
 
+// ── 页面 ────────────────────────────────────────
+
 function paneHtml() {
     // 配好了就收起配置区，让对话和输入框第一眼可见；没配过则展开引导填写
     const configured = !!getActiveLlmProfile().profile.apiUrl;
     return `<details class="xvoice-llm-config"${configured ? '' : ' open'}>
-            <summary>助手使用的模型${configured ? '' : '（请先填写）'}</summary>
+            <summary>
+                <span class="xvoice-status-dot ${configured ? 'ok' : 'warn'}" data-xv-dot></span>
+                <span data-xv-config-label>助手模型</span>
+            </summary>
             ${renderFields(LLM_FIELDS)}
             <div class="xvoice-row">
                 <button class="menu_button" data-as="models">拉取模型列表</button>
@@ -159,26 +208,30 @@ function paneHtml() {
                 <span class="xvoice-status" data-xv-llm-status></span>
             </div>
         </details>
-        <div class="xvoice-chat" data-xv-chat></div>
-        <div class="xvoice-row">
-            <button class="menu_button" data-as="diagnose">${icon('stethoscope')} 一键自检</button>
-            <button class="menu_button" data-as="clear">${icon('broom')} 清空对话</button>
+        <div class="xvoice-chat-head">
+            <span class="xvoice-chat-title">${icon('wand-magic-sparkles')} AI 助手</span>
+            <button type="button" class="xvoice-icon-btn" data-as="clear"
+                title="清空对话" aria-label="清空对话">${icon('broom')}</button>
         </div>
-        <div class="xvoice-input-row">
-            <textarea class="text_pole" data-xv-input data-autofocus rows="2" placeholder="描述你遇到的问题，例如：朗读没有声音 / 帮我配个去掉状态栏的正则"></textarea>
-            <button class="menu_button" data-as="send">发送</button>
+        <div class="xvoice-chat" data-xv-chat></div>
+        <div class="xvoice-composer">
+            <textarea class="text_pole" data-xv-input data-autofocus rows="1"
+                placeholder="描述你遇到的问题，例如：朗读没有声音…"></textarea>
+            <button type="button" class="xvoice-send" data-as="send"
+                title="发送" aria-label="发送">${icon('paper-plane')}</button>
         </div>`;
 }
-
-const WELCOME = '我能帮你排查朗读没声音、配置正则、挑音色和模型。\n'
-    + '不知道从哪开始就点「一键自检」——我会读取你的真实配置，再告诉你问题出在哪。';
 
 export function mountAssistantTab(pane) {
     pane.innerHTML = paneHtml();
     modelPicker = createModelPicker(pane);
     const refresh = bindFields(pane, LLM_FIELDS, () => getActiveLlmProfile().profile, saveSettings);
-    document.addEventListener('xvoice:settings-changed', refresh);
-    bubble(pane, 'assistant', WELCOME);
+    document.addEventListener('xvoice:settings-changed', () => {
+        refresh();
+        syncConfig(pane);
+    });
+    syncConfig(pane);
+    resetChat(pane);
 
     const input = pane.querySelector('[data-xv-input]');
 
@@ -196,17 +249,15 @@ export function mountAssistantTab(pane) {
     });
 
     pane.addEventListener('click', async (event) => {
+        const chip = event.target.closest('[data-chip]')?.dataset.chip;
+        if (chip) return send(pane, chip);
+
         const act = event.target.closest('[data-as]')?.dataset.as;
         if (act === 'test') return runTest(pane);
         if (act === 'models') return loadModels(pane);
         if (act === 'pick-model') return openModelPicker(pane);
         if (act === 'diagnose') return send(pane, '帮我做一次完整自检，说明当前配置有什么问题、怎么修。');
-        if (act === 'clear') {
-            history.length = 0;
-            pane.querySelector('[data-xv-chat]').innerHTML = '';
-            bubble(pane, 'assistant', WELCOME);
-            return;
-        }
+        if (act === 'clear') return resetChat(pane);
         if (act === 'send') return submit();
     });
 

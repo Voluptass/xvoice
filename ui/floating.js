@@ -160,7 +160,8 @@ function buildShell(title) {
 /** 打开时把焦点送进面板：优先当前可见页签里标记了 data-autofocus 的控件，否则落到当前页签。 */
 function focusFirst(body) {
     const pane = body.querySelector('.xvoice-wpane:not([hidden])');
-    const target = pane?.querySelector('[data-autofocus]')
+    // 触摸设备不聚焦输入框，免得一打开就弹软键盘
+    const target = (!isTouchDevice() && pane?.querySelector('[data-autofocus]'))
         || body.querySelector('.xvoice-tab.active')
         || body;
     try { target.focus(); } catch { /* 忽略 */ }
