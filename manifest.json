@@ -6,10 +6,10 @@
     "js": "index.js",
     "css": "style.css",
     "author": "",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "homePage": "",
     "hooks": {
         "update": "onExtensionUpdate"
     },
-    "update_notes": "0.4.1：助手页重做（空状态快捷入口 / 头像气泡 / 集成输入框）；页签栏固定不随内容滚动；触摸设备不再自动聚焦输入框"
+    "update_notes": "0.4.2：助手输入条去占位文字、去掉内层框与滚动条；0.4.1：助手页重做、页签栏固定"
 }

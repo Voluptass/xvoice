@@ -216,7 +216,7 @@ function paneHtml() {
         <div class="xvoice-chat" data-xv-chat></div>
         <div class="xvoice-composer">
             <textarea class="text_pole" data-xv-input data-autofocus rows="1"
-                placeholder="描述你遇到的问题，例如：朗读没有声音…"></textarea>
+                aria-label="给助手发消息"></textarea>
             <button type="button" class="xvoice-send" data-as="send"
                 title="发送" aria-label="发送">${icon('paper-plane')}</button>
         </div>`;
