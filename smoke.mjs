@@ -1,5 +1,6 @@
 import { clean, split, parseDialogue, dialogueConfidence } from './core/text.js';
 import { mixToMono, resample, encodeWav } from './core/audio.js';
+import { renderMarkdown } from './core/markdown.js';
 import { validateVoiceId } from './tts/minimax.js';
 import { applyAll } from './regex/apply.js';
 import { inspect } from './regex/danger.js';
@@ -145,6 +146,22 @@ checkThat('过短被拒', !!validateVoiceId('abc'), validateVoiceId('abc'));
 checkThat('首字符非字母被拒', !!validateVoiceId('1abcdefgh'), validateVoiceId('1abcdefgh'));
 checkThat('末位 - / _ 被拒', !!validateVoiceId('abcdefgh-') && !!validateVoiceId('abcdefgh_'), validateVoiceId('abcdefgh-'));
 checkThat('非法字符被拒', !!validateVoiceId('abcdefgh!'), validateVoiceId('abcdefgh!'));
+
+console.log('\n[Markdown 渲染]');
+check('转义 HTML',
+    renderMarkdown('<script>alert(1)</script>'), '<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>');
+check('粗体与斜体', renderMarkdown('**粗** 和 *斜*'), '<p><strong>粗</strong> 和 <em>斜</em></p>');
+check('行内代码', renderMarkdown('用 `code` 试试'), '<p>用 <code>code</code> 试试</p>');
+check('标题', renderMarkdown('## 标题'), '<h2>标题</h2>');
+check('无序列表', renderMarkdown('- a\n- b'), '<ul><li>a</li><li>b</li></ul>');
+check('有序列表', renderMarkdown('1. a\n2. b'), '<ol><li>a</li><li>b</li></ol>');
+check('代码块', renderMarkdown('```js\nlet a=1;\n```'),
+    '<pre><code class="language-js">let a=1;</code></pre>');
+check('安全链接', renderMarkdown('[官网](https://a.com)'),
+    '<p><a href="https://a.com" target="_blank" rel="noopener noreferrer">官网</a></p>');
+check('拦截 javascript: 链接', renderMarkdown('[点我](javascript:alert(1))'), '<p>点我</p>');
+check('引用', renderMarkdown('> 引用'), '<blockquote>引用</blockquote>');
+check('分割线', renderMarkdown('---'), '<hr>');
 
 console.log('\n[音频解码]');
 const blob = hexToBlob('494433', 'audio/mpeg');

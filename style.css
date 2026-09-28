@@ -515,6 +515,11 @@
     border-radius: 12px;
     font-size: 0.9em;
     line-height: 1.5;
+    word-break: break-word;
+}
+
+/* pre-wrap 放在正文上：放气泡上会把子元素之间的换行缩进也当空白渲染，撑高气泡 */
+.xvoice-msg-body {
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -527,6 +532,131 @@
 .xvoice-msg-user .xvoice-bubble {
     background: var(--white20a);
     border-top-right-radius: 4px;
+}
+
+/* 气泡操作：复制 / 重试 / 删除 */
+.xvoice-msg-actions {
+    display: flex;
+    gap: 2px;
+    margin-top: 6px;
+    justify-content: flex-end;
+}
+
+.xvoice-msg-assistant .xvoice-msg-actions {
+    justify-content: flex-start;
+}
+
+.xvoice-msg-act {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    opacity: 0.45;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+
+.xvoice-msg-act[hidden] {
+    display: none;
+}
+
+.xvoice-msg-act:hover {
+    opacity: 1;
+    background: var(--white20a);
+}
+
+.xvoice-msg-act.ok {
+    opacity: 1;
+    color: #6cc070;
+}
+
+/* 有鼠标时按钮悬停才出现；触摸设备常显 */
+@media (hover: hover) {
+    .xvoice-msg-actions {
+        opacity: 0;
+        transition: opacity 0.12s ease;
+    }
+
+    .xvoice-bubble:hover .xvoice-msg-actions,
+    .xvoice-bubble:focus-within .xvoice-msg-actions {
+        opacity: 1;
+    }
+}
+
+.xvoice-msg-error .xvoice-bubble {
+    border: 1px solid var(--warning, #e57373);
+}
+
+/* 气泡里的 Markdown */
+.xvoice-msg-body > :first-child { margin-top: 0; }
+.xvoice-msg-body > :last-child { margin-bottom: 0; }
+.xvoice-msg-body p { margin: 0 0 8px; }
+
+.xvoice-msg-body h1,
+.xvoice-msg-body h2,
+.xvoice-msg-body h3,
+.xvoice-msg-body h4,
+.xvoice-msg-body h5,
+.xvoice-msg-body h6 {
+    margin: 10px 0 6px;
+    font-size: 1.05em;
+    line-height: 1.4;
+}
+
+.xvoice-msg-body ul,
+.xvoice-msg-body ol {
+    margin: 4px 0 8px;
+    padding-left: 1.4em;
+}
+
+.xvoice-msg-body li { margin: 2px 0; }
+
+.xvoice-msg-body code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--black30a);
+    font-size: 0.88em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.xvoice-msg-body pre {
+    margin: 6px 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--black30a);
+    overflow-x: auto;
+}
+
+.xvoice-msg-body pre code {
+    padding: 0;
+    background: none;
+    font-size: 0.85em;
+    white-space: pre;
+}
+
+.xvoice-msg-body a {
+    color: var(--xv-accent);
+    text-decoration: underline;
+}
+
+.xvoice-msg-body blockquote {
+    margin: 6px 0;
+    padding: 2px 0 2px 10px;
+    border-left: 3px solid var(--SmartThemeBorderColor);
+    opacity: 0.85;
+}
+
+.xvoice-msg-body hr {
+    margin: 8px 0;
+    border: none;
+    border-top: 1px solid var(--SmartThemeBorderColor);
 }
 
 .xvoice-calls {
@@ -1183,6 +1313,11 @@
 .xvoice-float--mobile .xvoice-chip {
     min-height: 36px;
     padding: 8px 13px;
+}
+
+.xvoice-float--mobile .xvoice-msg-act {
+    width: 36px;
+    height: 36px;
 }
 
 .xvoice-float--mobile .xvoice-float-body {

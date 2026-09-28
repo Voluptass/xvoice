@@ -4,7 +4,8 @@ import { chat } from '../assistant/agent.js';
 import { stripCalls } from '../assistant/protocol.js';
 import { renderFields, bindFields, escapeHtml } from './form.js';
 import { createFloatingPanel, isTouchDevice } from './floating.js';
-import { icon } from './icons.js';
+import { renderMarkdown } from '../core/markdown.js';
+import { ICON, icon } from './icons.js';
 
 let modelPicker = null;
 let availableModels = [];
@@ -36,19 +37,84 @@ function emptyStateHtml() {
     </div>`;
 }
 
-function bubble(pane, role, text = '') {
+/** 写入气泡正文：用户消息按纯文本，助手消息渲染 Markdown。 */
+function paintBubble(el, text, { markdown = false } = {}) {
+    el.dataset.raw = text;
+    const body = el.querySelector('.xvoice-msg-body');
+    if (markdown) body.innerHTML = renderMarkdown(text);
+    else body.textContent = text;
+}
+
+function bubble(pane, role, text = '', { markdown = false } = {}) {
     const log = pane.querySelector('[data-xv-chat]');
     log.querySelector('[data-xv-empty]')?.remove();
     const el = document.createElement('div');
     el.className = `xvoice-msg xvoice-msg-${role}`;
     el.innerHTML = `<span class="xvoice-avatar" aria-hidden="true">${role === 'user' ? icon('user') : icon('wand-magic-sparkles')}</span>
         <div class="xvoice-bubble">
-            <div class="xvoice-msg-body">${escapeHtml(text)}</div>
+            <div class="xvoice-msg-body"></div>
             <div class="xvoice-calls"></div>
+            <div class="xvoice-msg-actions">
+                <button type="button" class="xvoice-msg-act" data-msg-act="copy" title="复制" aria-label="复制">${ICON.copy}</button>
+                <button type="button" class="xvoice-msg-act" data-msg-act="retry" title="重试" aria-label="重试" hidden>${ICON.refresh}</button>
+                <button type="button" class="xvoice-msg-act" data-msg-act="delete" title="删除" aria-label="删除">${ICON.trash}</button>
+            </div>
         </div>`;
+    if (text) paintBubble(el, text, { markdown });
     log.append(el);
     log.scrollTop = log.scrollHeight;
     return el;
+}
+
+/** 从剩下的气泡重建 history（删 / 重试后保持一致）。 */
+function rebuildHistory(pane) {
+    history.length = 0;
+    pane.querySelectorAll('.xvoice-msg').forEach((el) => {
+        history.push({
+            role: el.classList.contains('xvoice-msg-user') ? 'user' : 'assistant',
+            content: el.dataset.raw || '',
+        });
+    });
+    // 开头不能是助手发言，否则部分接口会挑刺
+    while (history.length && history[0].role !== 'user') history.shift();
+}
+
+async function copyMessage(el) {
+    const text = el.dataset.raw || '';
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+        document.body.append(area);
+        area.select();
+        try { document.execCommand('copy'); } catch { /* 忽略 */ }
+        area.remove();
+    }
+    const btn = el.querySelector('[data-msg-act="copy"]');
+    if (!btn) return;
+    const original = btn.innerHTML;
+    btn.innerHTML = ICON.check;
+    btn.classList.add('ok');
+    setTimeout(() => { btn.innerHTML = original; btn.classList.remove('ok'); }, 1200);
+}
+
+function deleteMessage(pane, el) {
+    el.remove();
+    rebuildHistory(pane);
+    if (!pane.querySelector('.xvoice-msg')) {
+        pane.querySelector('[data-xv-chat]').innerHTML = emptyStateHtml();
+    }
+}
+
+function retryMessage(pane, el) {
+    const prompt = el.dataset.prompt;
+    if (!prompt || busy) return;
+    el.remove();
+    rebuildHistory(pane);
+    send(pane, prompt, { retry: true });
 }
 
 /** 清空对话，回到引导状态。 */
@@ -73,17 +139,23 @@ function setBusy(pane, on) {
     if (send) send.disabled = on;
 }
 
-async function send(pane, text) {
+async function send(pane, text, { retry = false } = {}) {
     if (busy || !text.trim()) return;
     busy = true;
     setBusy(pane, true);
-    bubble(pane, 'user', text);
-    const el = bubble(pane, 'assistant', '思考中…');
+
+    if (!retry) bubble(pane, 'user', text);
+    const el = bubble(pane, 'assistant');
+    el.dataset.prompt = text;
     const body = el.querySelector('.xvoice-msg-body');
+    body.textContent = '思考中…';
+
+    // 重试时 history 最后一条就是这条用户消息，chat() 会自己带上，别重复
+    const prior = retry && history[history.length - 1]?.role === 'user' ? history.slice(0, -1) : history;
     let raw = '';
 
     try {
-        const { reply, messages } = await chat(text, history, {
+        const { reply, messages } = await chat(text, prior, {
             onDelta: (d) => {
                 raw += d;
                 body.textContent = stripCalls(raw) || '…';
@@ -91,11 +163,13 @@ async function send(pane, text) {
             },
             onCall: (info) => showCall(el, info),
         });
-        body.textContent = reply || '（没有返回内容）';
+        paintBubble(el, reply || '（没有返回内容）', { markdown: true });
         history.push(...messages);
     } catch (e) {
         body.textContent = `请求失败：${e.message}`;
         body.classList.add('xvoice-error');
+        el.classList.add('xvoice-msg-error');
+        el.querySelector('[data-msg-act="retry"]').hidden = false;
     } finally {
         busy = false;
         setBusy(pane, false);
@@ -251,6 +325,15 @@ export function mountAssistantTab(pane) {
     pane.addEventListener('click', async (event) => {
         const chip = event.target.closest('[data-chip]')?.dataset.chip;
         if (chip) return send(pane, chip);
+
+        const msgAct = event.target.closest('[data-msg-act]')?.dataset.msgAct;
+        if (msgAct) {
+            const el = event.target.closest('.xvoice-msg');
+            if (msgAct === 'copy') return copyMessage(el);
+            if (msgAct === 'delete') return deleteMessage(pane, el);
+            if (msgAct === 'retry') return retryMessage(pane, el);
+            return;
+        }
 
         const act = event.target.closest('[data-as]')?.dataset.as;
         if (act === 'test') return runTest(pane);

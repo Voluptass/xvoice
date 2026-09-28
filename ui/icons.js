@@ -25,4 +25,7 @@ export const ICON = {
     extract: icon('quote-left'),
     extractAi: icon('robot'),
     list: icon('list'),
+    copy: icon('copy'),
+    check: icon('check'),
+    refresh: icon('rotate-right'),
 };
